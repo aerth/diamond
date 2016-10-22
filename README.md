@@ -1,5 +1,7 @@
 # DIAMOND ⋄
 
+[![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
+
 Turn your HTTP web application into a machine.
 
 Like a transmission, a diamond server has "gears". They are called "runlevels".
