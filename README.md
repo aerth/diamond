@@ -4,6 +4,8 @@ Turn your HTTP web application into a machine.
 
 Like a transmission, a diamond server has "gears". They are called "runlevels".
 
+![Screenshot of both diamond-admin and diamond server](https://github.com/aerth/diamond/blob/master/diamond-screenshot.png?raw=true)
+
 The server can boot without listening, then the admin can shift gears into the
         'public HTTP mode', (runlevel 3) and back to 'single user mode' (runlevel 1).
 
