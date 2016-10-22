@@ -40,11 +40,11 @@ This project is split into three sections.
 ## 1. diamond library
 
 ```
-srv := diamond.NewServer()
+srv := diamond.NewServer(route)
 err := srv.ConfigPath("config.json")
 // do something with err
 mux := route() // func route() *mux.Router {}
-err = srv.Start(mux)
+err = srv.Start()
 // do something with err
 select {
         case <-srv.Quit:
