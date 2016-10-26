@@ -63,8 +63,9 @@ are called "runlevels". They are, in order:
 
 When entering "runlevel 1", the server opens a
 tcp socket, which is how the administrator can make changes.
-It stays open until runlevel 0 is entered, in which the server
-is stopped completely.
+It stays open until runlevel 0 is entered, in which the server is stopped completely. 
+
+Entering runlevel 1 from a higher level closes all TCP connection immediately.
 
 Entering "runlevel 3" opens up a TCP port for
 HTTP traffic.
