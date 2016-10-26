@@ -46,15 +46,10 @@ func (s *Server) runlevel0() {
 // single user mode
 func (s *Server) runlevel1() {
 	s.lock.Lock()
-
-	s.runlevel6()
+	s.runlevel6() // stop listener
 	s.level = 1
-	//if last != 3 {
 	time.Sleep(1 * time.Second)
-	s.lock.Unlock() // http server will unlock when stopped
-
-	//}
-	//s.ErrorLog.Printf("Entered runlevel 1")
+	s.lock.Unlock() 
 
 }
 

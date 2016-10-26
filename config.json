@@ -1,9 +1,0 @@
-{
-	"Debug":false,
-	"Socket":"/tmp/diamond.socket",
-	"Log":"debug.log",
-	"Kickable": true,
-	"Kicks": true
-
-
-}

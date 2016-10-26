@@ -1,5 +1,12 @@
 #!/bin/sh
+go get -v -d github.com/aerth/diamond/...
 set -e
+
+if [ -z "$GOPATH" ]; then
+echo "No GOPATH set. Try: GOPATH=/tmp/gopath ./build.sh"
+exit 2
+fi
+
 
 # preserve working dir
 wd=$PWD
@@ -25,7 +32,8 @@ fi
 
 cd $DIAMOND
 echo $PWD
-ls
+lib=$(ls | grep -v lib)
+cat LICENSE.md
 sleep 1
 CMD=$1
 
@@ -39,13 +47,10 @@ case $CMD in
 	test
 ;;
 'all')
-        echo "COMBO!"
+        echo "Building ./diamondd and ./diamond-admin"
         echo "Building diamond-admin"
-        sleep 1
         build_admin
-        sleep 1
         echo "Building diamondd server"
-        sleep 1
         build_server
  ;;
 'admin')
@@ -60,4 +65,5 @@ case $CMD in
  ;;
 *)
 echo "$0 all" or "$0 server" or "$0 admin"
+;;
 esac
