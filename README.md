@@ -97,7 +97,7 @@ Adminstrative user must be the same unix user as the server.
 Commands:
 
   * telinit 0-6 - Tell the server to initialize runlevel X
-  * restart - Short for telinit 6
+  * restart - Return to default runlevel
   * stop - Short for telinit 0
   * load - Load a configuration file (see CONFIG FILE)
   * backup - Return an compressed archive of the database to be used with import
@@ -136,7 +136,7 @@ or s.ConfigPath(path string) you can supply a custom config path.
         Log      string // directory to write logs (Can be a single dot)
 
 
-### example config.json:
+### example config.json with minimal recommended fields:
         ```
         {
                 "Name":"Diamonds! ⋄",
@@ -157,3 +157,35 @@ build.sh admin
 build.sh server
 build.sh all # builds both
 ```
+
+## Known Issues
+
+  * Server must be configured (s.Config() or s.ConfigPath()) before using s.Start(), should be fatal error message?
+  * Addr must be defined correctly, should be fatal error message?
+
+## Future
+
+  * Customizable and additional runlevels
+
+## Reporting issues, Contributing
+
+Please submit a pull request if:
+
+  * You have an example for usage with a different http routing library
+  * You have a bug fix
+  * You have simplified the library, removed lines of code, etc
+
+Please submit a new github issue if:
+
+  * You are thinking about adding a new feature
+  * You have encountered a bug while using diamond
+  * You have a question about an undocumented feature
+
+## Author
+
+Copyright 2016  aerth <aerth@riseup.net>
+
+Contributions are welcome
+
+MIT LICENSE
+  
