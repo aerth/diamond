@@ -1,0 +1,25 @@
+diamond v0.1
+
+Breaking Changes:
+
+  * s.Config is not a function anymore, it is a type (ConfigT) and its fields are now exported.
+      type ConfigT struct {
+      	Name        string // user friendly name
+      	Addr        string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
+      	Socket      string // path of Socket file to create (/tmp/diamond.sock)
+      	Level       int
+      	Debug       bool
+      	Kicks       bool   // will kick to launch
+      	Kickable    bool   // able to be kicked
+      	DoCycleTest bool   // do 1-3-default cycle at launch
+      	Log         string // directory to write logs
+      }
+
+  * The function to load a configuration from bytes is now s.Configure()
+      func (s *Server) Configure(b []byte) error {}
+
+Notes:
+  * To load configuration from file, still use this method (as seen in simple.go)
+      err := s.ConfigPath("config.json")
+  * Easily replace "s.Config(" with "s.Configure(" if you are loading from bytes.
+  * 
