@@ -1,1 +1,3 @@
-bin
+./diamondd
+./diamond-admin
+./diamond.log
