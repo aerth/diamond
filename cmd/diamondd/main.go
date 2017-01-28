@@ -45,7 +45,7 @@ func main() {
                 "Log":"` + *logpath + `",
                 "Socket":"` + *socketpath + `",
                 "Debug":` + fmt.Sprint(*debug) + `}`)
-		err := srv.Config(b)
+		err := srv.Configure(b)
 		if err != nil {
 			panic(err)
 		}

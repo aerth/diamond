@@ -15,7 +15,7 @@ func (s *Server) respawn() {
 
 // Another Diamond is occupying our socket. Let's kick it!
 func (s *Server) kickDiamond() string {
-	client := NewClient(s.config.socket)
+	client := NewClient(s.Config.Socket)
 	r, e := client.Send("KICK")
 	if e != nil {
 		if strings.Contains(e.Error(), "no such file or directory") {

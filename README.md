@@ -63,7 +63,7 @@ are called "runlevels". They are, in order:
 
 When entering "runlevel 1", the server opens a
 tcp socket, which is how the administrator can make changes.
-It stays open until runlevel 0 is entered, in which the server is stopped completely. 
+It stays open until runlevel 0 is entered, in which the server is stopped completely.
 
 Entering runlevel 1 from a higher level closes all TCP connection immediately.
 
@@ -153,20 +153,17 @@ or s.ConfigPath(path string) you can supply a custom config path.
 
 ## build.sh
 
-```
-build.sh admin
-build.sh server
-build.sh all # builds both
-```
+Change directory to $GOPATH/src/github.com/aerth/diamond before using bin/build.sh
 
-## Known Issues
-
-  * Server must be configured (s.Config() or s.ConfigPath()) before using s.Start(), should be fatal error message?
-  * Addr must be defined correctly, should be fatal error message?
+```
+bin/build.sh admin
+bin/build.sh server
+bin/build.sh all # builds both
+```
 
 ## Future
 
-  * Customizable and additional runlevels
+  * Customizable / additional runlevels
 
 ## Reporting issues, Contributing
 
@@ -184,9 +181,8 @@ Please submit a new github issue if:
 
 ## Author
 
-Copyright 2016  aerth <aerth@riseup.net>
+Copyright 2016-2017  aerth <aerth@riseup.net>
 
 Contributions are welcome
 
 MIT LICENSE
-  

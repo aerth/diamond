@@ -37,17 +37,17 @@ func doOnce() {
 	socketname := tmpf.Name()
 	tmpf.Close()
 	os.Remove(socketname)
-	s.config.socket = socketname
-	s.config.addr = ":" + strconv.Itoa(30000+rand.Intn(1000))
-	s.config.name = "Test Diamond"
-	s.config.level = 1
-	s.config.debug = true
+	s.Config.socket = socketname
+	s.Config.Addr = ":" + strconv.Itoa(30000+rand.Intn(1000))
+	s.Config.name = "Test Diamond"
+	s.Config.level = 1
+	s.Config.debug = true
 	s.configured = true
-	if s.config.debug {
+	if s.Config.debug {
 		log.SetFlags(log.Llongfile)
 	}
 	http.DefaultClient.Timeout = time.Second * 3
-	testhome = "http://127.0.0.1" + s.config.addr
+	testhome = "http://127.0.0.1" + s.Config.Addr
 	e = s.Start()
 	if e != nil {
 		panic(e)
@@ -276,8 +276,8 @@ func TestConfigJSONGOOD(t *testing.T) {
 		fmt.Println("Er:", e)
 	}
 	assert.Nil(t, e)
-	assert.Equal(t, ":8008", config.addr)
-	assert.False(t, config.debug)
+	assert.Equal(t, ":8008", config.Addr)
+	assert.False(t, Config.Debug)
 	assert.Equal(t, "Testing Zone!", config.name)
 	assert.Equal(t, "/tmp/testingZone", config.socket)
 }
@@ -304,7 +304,7 @@ func TestConfigJSONBad(t *testing.T) {
 		_, e = readconf(tmpfile.Name())
 		os.Remove(tmpfile.Name())
 		if e != nil {
-			if s.config.debug {
+			if s.Config.debug {
 				fmt.Printf("Testing Config:\n%s\nError: %s\n", badconfig, e)
 			}
 		}
@@ -312,8 +312,8 @@ func TestConfigJSONBad(t *testing.T) {
 		assert.NotNil(t, e)
 		fmt.Println(e)
 		time.Sleep(time.Millisecond * 100)
-		// assert.Equal(t, "", config.addr)
-		// assert.False(t, config.debug)
+		// assert.Equal(t, "", config.Addr)
+		// assert.False(t, Config.Debug)
 		// assert.Equal(t, "", config.name)
 		// assert.Equal(t, "", config.socket)
 	}

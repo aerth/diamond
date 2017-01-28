@@ -43,7 +43,7 @@ type Server struct {
 	listenlock  sync.Mutex
 	telinit     chan int   // accepts runlevel requests
 	lock        sync.Mutex // guards only shifting between runlevels
-	config      configT    // parsed config
+	Config      ConfigT    // parsed config
 	configpath  string     // path to config file
 	configured  bool       // has been configured
 
@@ -93,11 +93,11 @@ func (s *Server) Status() string {
 	return fmt.Sprintf("Server Name: %s\nVersion: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
 		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
 		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
-		s.config.name, version, s.level, s.config.debug,
-		s.config.socket,
-		s.config.addr,
+		s.Config.Name, version, s.level, s.Config.Debug,
+		s.Config.Socket,
+		s.Config.Addr,
 		str,
-		s.config.level, time.Since(s.since), s.numconn,
+		s.Config.Level, time.Since(s.since), s.numconn,
 		s.allconn, os.Getenv("PWD"), exeinfo())
 
 }
@@ -133,7 +133,7 @@ func (s *Server) telcom() {
 			s.lock.Lock()
 			s.lock.Unlock()
 
-			if s.config.debug {
+			if s.Config.Debug {
 				s.ErrorLog.Printf("runlevel request: %v", newlevel)
 			}
 
@@ -167,20 +167,20 @@ func (s *Server) telcom() {
 // switch to log file if not stdout
 func (s *Server) dolog() error {
 	// empty logfile string is stdout
-	if s.config.log == "" {
-		s.config.log = stdout
+	if s.Config.Log == "" {
+		s.Config.Log = stdout
 	}
 	// user didn't chose stdout
-	if s.config.log != stdout {
+	if s.Config.Log != stdout {
 
-		f, err := os.OpenFile(s.config.log, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0700)
+		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0700)
 		if err == nil {
 			s.ErrorLog.SetOutput(f)
 		}
 		if err != nil {
 			return err
 		}
-		fmt.Println("Diamond log:", s.config.log)
+		fmt.Println("Diamond log:", s.Config.Log)
 	}
 	return nil
 }

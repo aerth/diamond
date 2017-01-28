@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
-
 	"os"
+	"time"
 )
 
 var (
@@ -15,7 +14,7 @@ var (
 )
 
 // NewServer returns a new server, ready to be configured or started.
-// s.ErrorLog is a logger ready to use, and switches to log file (defined in config) once fully booted.
+// s.ErrorLog is a logger ready to use, and switches to log file.
 func NewServer(mux ...http.Handler) *Server {
 	n := new(Server)
 	n.since = time.Now()
@@ -55,18 +54,16 @@ func (s *Server) Start() error {
 
 	}
 
-	if s.config.debug {
-		fmt.Println(s.config)
+	if s.Config.Debug {
+		fmt.Println(s.Config)
 	}
 
-	//s.quitchan = make(chan os.Signal, 1)
-	//signal.Notify(s.quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT)
-
+	// Socket listen timeout
 	done := make(chan int, 1)
 	go admin(done, s) // listen on unix socket
 	select {
 	case <-done:
-		//
+		// good
 	case <-time.After(3 * time.Second):
 		fmt.Println("Timeout waiting for UNIX socket to be released")
 		os.Exit(2)
@@ -76,22 +73,28 @@ func (s *Server) Start() error {
 		fmt.Println("Could not socket")
 		os.Exit(2)
 	}
-
-	s.ErrorLog.Printf("Cycle test")
-	switch s.config.level {
-	case 1:
-		if s.config.debug {
-			s.ErrorLog.Printf("Testing runlevel 3")
+	cycleTest := func() {
+		s.ErrorLog.Printf("Cycle test")
+		switch s.Config.Level {
+		case 1:
+			if s.Config.Debug {
+				s.ErrorLog.Printf("Testing runlevel 3")
+			}
+			s.telinit <- 3 // test http port is available
+		case 3:
+			s.telinit <- 1 // go to single user mode first
+		default:
+			fmt.Println("Bad Config: 'RunLevel' should be 1 or 3")
+			os.Exit(2)
 		}
-		s.telinit <- 3 // test http port is available
-	case 3:
-		s.telinit <- 1 // go to single user mode first
-	default:
-		fmt.Println("Bad Config: 'RunLevel' should be 1 or 3")
-		os.Exit(2)
 	}
 
-	s.telinit <- s.config.level // go to default runlevel
+	// If JSON config: "DoCycleTest":1,
+	if s.Config.DoCycleTest {
+		cycleTest()
+	}
+
+	s.telinit <- s.Config.Level // go to default runlevel
 
 	return nil // no errors
 }
@@ -129,10 +132,10 @@ func (s *Server) ConfigPath(path string) error {
 	return s.doconfig(conf)
 }
 
-// Config a server using json []byte
+// Configure a server using json []byte
 // If server s is created, and then s.Config(b) is used before Start(), config.json is not read.
 // If s.Config(b) is not used, config.json or -config flag will be used.
-func (s *Server) Config(b []byte) error {
+func (s *Server) Configure(b []byte) error {
 	config, e := readconfigJSON(b)
 	if e != nil {
 		return e

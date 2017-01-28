@@ -37,7 +37,7 @@ type rpcpacket struct {
 
 // Command to process (RPC via UNIX socket)
 func (p *rpcpacket) Command(args string, reply *string) error {
-	if p.parent.config.debug {
+	if p.parent.Config.Debug {
 		p.parent.logf("RECV: %s", args)
 	}
 	switch {
@@ -53,7 +53,7 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		*reply = "DONE"
 	case strings.HasPrefix(args, "HELLO from "):
 		p.parent.ErrorLog.Println(args)
-		*reply = "HELLO from " + p.parent.config.name
+		*reply = "HELLO from " + p.parent.Config.Name
 	case args == "status":
 		*reply = p.parent.Status()
 	case args == "update":
@@ -78,8 +78,8 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		*reply = "Redeploying ⋄"
 		p.parent.respawn()
 		p.parent.telinit <- 0
-	case args == "reconfig":
-		*reply = "Reconfiguring ⋄"
+	case args == "reConfig":
+		*reply = "ReConfiguring ⋄"
 		p.parent.configured = false
 		conf, e := readconf(p.parent.configpath)
 		if e != nil {
@@ -93,7 +93,7 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		p.parent.telinit <- cur // reinit current runlevel
 
 	case args == "KICK":
-		if p.parent.config.kickable {
+		if p.parent.Config.Kickable {
 			*reply = "OKAY"
 			p.parent.log("Got KICKed")
 			p.parent.telinit <- 0
@@ -102,7 +102,7 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		}
 	}
 
-	if p.parent.config.debug {
+	if p.parent.Config.Debug {
 		p.parent.logf("REPL: %s", *reply)
 	}
 	return nil
@@ -136,30 +136,30 @@ func (s *Server) socketAccept() error {
 	return nil
 }
 
-// Listen on s.config.socket for admin connections
+// Listen on s.Config.Socket for admin connections
 func admin(ch chan int, s *Server) {
 Okay:
-	if s.config.socket == "" {
+	if s.Config.Socket == "" {
 		exit("Blank socket")
 		return
 	}
-	addr, _ := net.ResolveUnixAddr("unix", s.config.socket)
+	addr, _ := net.ResolveUnixAddr("unix", s.Config.Socket)
 	r, e := net.DialUnix("unix", nil, addr)
 	if e != nil {
 		if !strings.Contains(e.Error(), "no such") {
-			s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.config.socket)
+			s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.Config.Socket)
 			s.ErrorLog.Printf("You may safely delete it if there are no running Diamond processes.")
-			if s.config.debug {
+			if s.Config.Debug {
 				s.ErrorLog.Printf("%s", e)
 			}
 			os.Exit(2)
 		}
 	} else {
-		if s.config.debug {
+		if s.Config.Debug {
 			s.ErrorLog.Print("Socket exists:" + r.RemoteAddr().String())
 		}
 		// There is a running Diamond instance.
-		if s.config.kicks { // We are kicking
+		if s.Config.Kicks { // We are kicking
 			out := s.kickDiamond()
 			if out == "OKAY" || out == "unexpected EOF" {
 				s.ErrorLog.Print("Kicked a diamond")
@@ -167,14 +167,14 @@ Okay:
 				goto Okay
 			}
 			exit("There is already a running server with socket: " +
-				s.config.socket + ". We tried kicking, but it replied with: " + out)
+				s.Config.Socket + ". We tried kicking, but it replied with: " + out)
 		}
 		exit("There is already a running server with socket: " +
-			s.config.socket +
-			". If you want to replace it, use {\"Kick\": true} in config.")
+			s.Config.Socket +
+			". If you want to replace it, use {\"Kick\": true} in Config.")
 
 	}
-	e = s.socketListen(s.config.socket)
+	e = s.socketListen(s.Config.Socket)
 	if e != nil {
 		log.Println("eek:", e)
 		panic(e)
@@ -189,12 +189,12 @@ Okay:
 				"use of closed network connection") && s.level == 0 {
 				return
 			}
-			if s.config.debug {
+			if s.Config.Debug {
 				s.ErrorLog.Printf("[socket] %s", e.Error())
 			}
 			return
 		}
-		if s.config.debug {
+		if s.Config.Debug {
 			s.ErrorLog.Printf("Socket Connection: %s", time.Now().Format(time.Kitchen))
 		}
 

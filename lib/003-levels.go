@@ -37,7 +37,7 @@ func (s *Server) runlevel0() {
 	}
 	// exit code 0
 	s.ErrorLog.Printf("Goodbye!")
-	if s.config.log != "stdout" {
+	if s.Config.Log != "stdout" {
 		fmt.Println("Goodbye!")
 	}
 	os.Exit(0)
@@ -49,14 +49,14 @@ func (s *Server) runlevel1() {
 	s.runlevel6() // stop listener
 	s.level = 1
 	time.Sleep(1 * time.Second)
-	s.lock.Unlock() 
+	s.lock.Unlock()
 
 }
 
 // multiuser mode
 func (s *Server) runlevel3() {
 	if s.level == 3 {
-		if s.config.debug {
+		if s.Config.Debug {
 			s.ErrorLog.Printf("Already in runlevel 3, switch to runlevel 1 first.")
 		}
 		return
@@ -65,12 +65,12 @@ func (s *Server) runlevel3() {
 
 	// not using defer unlock because httpserver will unlock properly.
 
-	if s.config.debug {
+	if s.Config.Debug {
 		s.ErrorLog.Printf("Entering runlevel 3")
 	}
 
-	// start listening on s.config.addr (config or -http flag)
-	l, err := net.Listen("tcp", s.config.addr)
+	// start listening on s.Config.Addr (config or -http flag)
+	l, err := net.Listen("tcp", s.Config.Addr)
 	if err != nil {
 		s.ErrorLog.Printf("** WARNING **: %s", err)
 		s.lock.Unlock()
@@ -105,7 +105,7 @@ func (s *Server) runlevel6() {
 	// disallow new multiuser connections
 
 	if s.listenerTCP != nil {
-		s.ErrorLog.Printf("Closing TCP listener: %s", s.config.addr)
+		s.ErrorLog.Printf("Closing TCP listener: %s", s.Config.Addr)
 		e := s.listenerTCP.Close()
 		if e != nil {
 			panic(e)

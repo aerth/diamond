@@ -1,10 +1,11 @@
 package diamond
 
 import (
-		stoplisten "github.com/hydrogen18/stoppableListener"
 	"net"
 	"net/http"
 	"time"
+
+	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
 // ServeStatus serves Status report
@@ -16,7 +17,7 @@ func (s *Server) ServeStatus(w http.ResponseWriter, r *http.Request) {
 // It is only called by runlevel3 function while s.lock is Locked.
 func (s *Server) serveHTTP() {
 	if s.listenerTCP == nil {
-		if s.config.debug {
+		if s.Config.Debug {
 			s.ErrorLog.Printf("Not serving TCP, runlevel 3 is already dead")
 		}
 		s.lock.Unlock()
@@ -30,7 +31,7 @@ func (s *Server) serveHTTP() {
 	}
 
 	if s.level != 3 {
-		if s.config.debug {
+		if s.Config.Debug {
 			s.ErrorLog.Printf("Runlevel 3 already dead")
 
 		}
@@ -38,7 +39,7 @@ func (s *Server) serveHTTP() {
 		return
 	}
 
-	if s.config.debug {
+	if s.Config.Debug {
 		s.ErrorLog.Print("HTTP Processing")
 	}
 

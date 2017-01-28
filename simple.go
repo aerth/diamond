@@ -12,14 +12,13 @@ func main() {
 	// Try config.json
 	e := s.ConfigPath("config.json")
 	if e != nil {
-		s.Config(ccc)
+		s.Configure(ccc)
 	}
 	// Start the server, using a nil handler (404 for every page)
 	s.Start()
 	// Just keep doing that
 	select {}
 }
-
 
 var ccc = []byte(`{
             "Name":"Diamonds! ⋄",
