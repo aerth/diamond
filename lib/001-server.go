@@ -87,9 +87,9 @@ func (s *Server) LevelString() string {
 // Status returns a status report string
 func (s *Server) Status() string {
 	if s == nil {
-		return "nil"
+		return ""
 	}
-	str := listnstr(3)
+	str := listnstr(s.level)
 	return fmt.Sprintf("Server Name: %s\nVersion: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
 		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
 		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
@@ -101,6 +101,8 @@ func (s *Server) Status() string {
 		s.allconn, os.Getenv("PWD"), exeinfo())
 
 }
+
+// Human readable bool
 func listnstr(i int) string {
 	if i == 3 {
 		return "Listening"
@@ -108,7 +110,7 @@ func listnstr(i int) string {
 	return "Not Listening"
 }
 
-// from net/http
+// Print to log (from net/http)
 func (s *Server) logf(format string, args ...interface{}) {
 	if s.ErrorLog != nil {
 		s.ErrorLog.Printf(format, args...)

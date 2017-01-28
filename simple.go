@@ -1,4 +1,4 @@
-// The most simple Diamond ⋄
+// The most simple Diamond ⋄ server
 package main
 
 import diamond "github.com/aerth/diamond/lib" // ⋄
