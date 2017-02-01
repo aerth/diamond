@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	version = "1" // Version 1
+	version = "0.1" // Version 0.1
 )
 
 // NewServer returns a new server, ready to be configured or started.
@@ -118,8 +118,10 @@ func (s *Server) Runlevel(i int) {
 
 // ConfigPath adds a path to a JSON file to be used as the config file
 func (s *Server) ConfigPath(path string) error {
+
 	conf, e := readconf(path)
 	if e != nil {
+
 		return e
 	}
 	e = parseconf(conf)
@@ -128,7 +130,7 @@ func (s *Server) ConfigPath(path string) error {
 	}
 
 	s.configpath = path
-
+	fmt.Println("1")
 	return s.doconfig(conf)
 }
 
@@ -136,6 +138,7 @@ func (s *Server) ConfigPath(path string) error {
 // If server s is created, and then s.Config(b) is used before Start(), config.json is not read.
 // If s.Config(b) is not used, config.json or -config flag will be used.
 func (s *Server) Configure(b []byte) error {
+
 	config, e := readconfigJSON(b)
 	if e != nil {
 		return e

@@ -2,8 +2,8 @@ diamond v0.1
 
 Breaking Changes:
 
-  * s.Config is not a function anymore, it is a type (ConfigT) and its fields are now exported.
-      type ConfigT struct {
+  * s.Config is now a type (ConfigFields) and its fields are exported.
+      type ConfigFields struct {
       	Name        string // user friendly name
       	Addr        string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
       	Socket      string // path of Socket file to create (/tmp/diamond.sock)
@@ -22,4 +22,4 @@ Notes:
   * To load configuration from file, still use this method (as seen in simple.go)
       err := s.ConfigPath("config.json")
   * Easily replace "s.Config(" with "s.Configure(" if you are loading from bytes.
-  * 
+  *

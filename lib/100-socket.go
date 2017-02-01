@@ -46,6 +46,8 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 			p.parent.telinit <- 1
 		} else if args == "telinit 3" {
 			p.parent.telinit <- 3
+		} else if args == "telinit 4" {
+			p.parent.telinit <- 4
 		} else if args == "telinit 0" {
 			p.parent.telinit <- 0
 		}

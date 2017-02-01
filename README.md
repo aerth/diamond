@@ -112,15 +112,15 @@ Commands:
 
 ## 3. Example server
 
-When using go get, you will notice a small example server gets built. This is the most simple Diamond.
+When using go get, you will notice a small example server gets built.
 
-More complicated projects would have databases and authentication mechanisms.
+This is the most simple Diamond server.
 
-Both would be compatible with Diamond.
+More examples are located in the ./example directory.
 
 ## CONFIG FILE
 
-JSON encoded.
+Must be JSON encoded. Required fields are Addr and Socket. All other fields are optional.
 
 If not specified, diamond library will search for a config.json file in the working directory.
 

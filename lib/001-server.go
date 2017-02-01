@@ -41,16 +41,16 @@ type Server struct {
 	// TCP Listener that can be stopped
 	listenerTCP *stoplisten.StoppableListener
 	listenlock  sync.Mutex
-	telinit     chan int   // accepts runlevel requests
-	lock        sync.Mutex // guards only shifting between runlevels
-	Config      ConfigT    // parsed config
-	configpath  string     // path to config file
-	configured  bool       // has been configured
+	telinit     chan int      // accepts runlevel requests
+	lock        sync.Mutex    // guards only shifting between runlevels
+	Config      *ConfigFields // parsed config
+	configpath  string        // path to config file
+	configured  bool          // has been configured
 
 	numconn, allconn int          // count connections, used by s.Status()
 	counter          sync.Mutex   // guards only conn counter writes
 	mux              http.Handler // given by package main in with s.Start(mux http.Handler)
-	Server           *http.Server // s.Server is created immediately before serving in runlevel 3
+	Server           *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
 	socketed         bool         // true if we have started listening on a socket
 	signal           bool         // false if we should not telinit 0 when receive os signal
 }
@@ -102,9 +102,9 @@ func (s *Server) Status() string {
 
 }
 
-// Human readable bool
+// Human readable
 func listnstr(i int) string {
-	if i == 3 {
+	if i >= 3 {
 		return "Listening"
 	}
 	return "Not Listening"
@@ -158,6 +158,12 @@ func (s *Server) telcom() {
 				s.runlevel3()
 				time.Sleep(300 * time.Millisecond)
 				s.ErrorLog.Printf("Shifted to runlevel 3")
+
+			case 4:
+				s.ErrorLog.Printf("Shifting to runlevel 4")
+				s.runlevel4()
+				time.Sleep(300 * time.Millisecond)
+				s.ErrorLog.Printf("Shifted to runlevel 4")
 			default:
 				s.ErrorLog.Printf("BAD RUNLEVEL: %v", newlevel)
 			}

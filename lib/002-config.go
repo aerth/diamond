@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// ConfigT fields are exported only so that JSON can be read from the config file.
-type ConfigT struct {
+// ConfigFields fields are exported only so that JSON can be read from the config file.
+type ConfigFields struct {
 	Name        string // user friendly name
 	Addr        string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
 	Socket      string // path of Socket file to create (/tmp/diamond.sock)
@@ -24,30 +24,30 @@ type ConfigT struct {
 	Log         string // directory to write logs
 }
 
-func readconf(path string) (ConfigT, error) {
+func readconf(path string) (*ConfigFields, error) {
 	b, e := ioutil.ReadFile(path)
 	if e != nil {
 		if !strings.Contains(e.Error(), "No such") {
-			log.Println(e)
-			return ConfigT{}, nil // return no error, no config
+			fmt.Println("⋄ Load Config:", e)
+			return nil, nil // return no error, no config
 		}
-		return ConfigT{}, e
+		return &ConfigFields{}, e
 	}
 	if b == nil {
-		return ConfigT{}, errors.New("Empty: " + path)
+		return &ConfigFields{}, errors.New("Empty: " + path)
 	}
 	return readconfigJSON(b)
 }
-func readconfigJSON(b []byte) (ConfigT, error) {
-	var c ConfigT
+func readconfigJSON(b []byte) (*ConfigFields, error) {
+	var c *ConfigFields
 	e := json.Unmarshal(b, &c)
 	if e != nil {
-		return ConfigT{}, e
+		return nil, e
 	}
 
 	// All fields are blank
 	if c.Addr == "" && !c.Debug && c.Level == 0 && c.Name == "" && c.Socket == "" {
-		return ConfigT{}, errors.New("Bad config, need fields: Name, Socket, Addr, Debug")
+		return nil, errors.New("Bad config, need fields: Name, Socket, Addr, Debug")
 	}
 	//
 	// //unexport values
@@ -64,8 +64,11 @@ func readconfigJSON(b []byte) (ConfigT, error) {
 	return c, parseconf(c)
 }
 
-func parseconf(c ConfigT) error {
+func parseconf(c *ConfigFields) error {
 	var e1, e2 error
+	if c == nil {
+		return errors.New("Bad Config")
+	}
 	// Check valid ADDR
 	if c.Addr != "" {
 		_, e1 = net.ResolveTCPAddr("tcp", c.Addr)
@@ -97,8 +100,12 @@ func parseconf(c ConfigT) error {
 	return e1
 }
 
-// Transfer the values of ConfigT to s.Config
-func (s *Server) doconfig(conf ConfigT) error {
+// Transfer the values of ConfigFields to s.Config
+func (s *Server) doconfig(conf *ConfigFields) error {
+	if s.Config == nil {
+
+		s.Config = &ConfigFields{}
+	}
 	if conf.Addr != "" {
 		s.Config.Addr = conf.Addr
 	}
@@ -134,7 +141,6 @@ func (s *Server) doconfig(conf ConfigT) error {
 	s.Config.Kickable = conf.Kickable
 	s.Config.Kicks = conf.Kicks
 	s.Config.Log = conf.Log
-
 	s.configured = true // mark server configured
 	return nil
 }

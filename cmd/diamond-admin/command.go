@@ -166,6 +166,8 @@ Start:
 				cmd = "telinit 1"
 			case "Multi User Mode":
 				cmd = "telinit 3"
+			case "Custom Multi User Mode":
+				cmd = "telinit 4"
 			case "Upgrade Server":
 				cmd = "upgrade"
 			case "Rebuild Server":
