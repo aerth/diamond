@@ -130,7 +130,6 @@ func (s *Server) ConfigPath(path string) error {
 	}
 
 	s.configpath = path
-	fmt.Println("1")
 	return s.doconfig(conf)
 }
 
