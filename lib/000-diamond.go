@@ -41,7 +41,7 @@ func NewServer(mux ...http.Handler) *Server {
 // Start the Diamond Construct. Should be done after Configuration.
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() error {
-	fmt.Println("Diamond Construct ⋄", version)
+	fmt.Println("Diamond Construct ⋄", version, "Initialized")
 	if !s.configured {
 		s.ErrorLog.Print("Diamond started without configuration.")
 		config, e := readconf(s.configpath)
