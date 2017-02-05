@@ -162,7 +162,7 @@ Okay:
 		}
 		// There is a running Diamond instance.
 		if s.Config.Kicks { // We are kicking
-			out := s.kickDiamond()
+			out := s.Kick()
 			if out == "OKAY" || out == "unexpected EOF" {
 				s.ErrorLog.Print("Kicked a diamond")
 				time.Sleep(100 * time.Millisecond)
