@@ -80,8 +80,8 @@ func (s *Server) Start() error {
 			if s.Config.Debug {
 				s.ErrorLog.Printf("Testing runlevel 3")
 			}
-			s.telinit <- 3 // test http port is available
-		case 3:
+			//	s.telinit <- 3 // test http port is available
+		case 3, 4:
 			s.telinit <- 1 // go to single user mode first
 		default:
 			fmt.Println("Bad Config: 'RunLevel' should be 1 or 3")
@@ -91,6 +91,7 @@ func (s *Server) Start() error {
 
 	// If JSON config: "DoCycleTest":1,
 	if s.Config.DoCycleTest {
+		fmt.Println("Doing cycle Test")
 		cycleTest()
 	}
 
@@ -113,7 +114,8 @@ func (s *Server) Runlevel(i int) {
 	}
 	s.ErrorLog.Print("Got runlevel:", i)
 	s.telinit <- i
-	s.ErrorLog.Printf("Send runlevel %v to telinit", i)
+	s.ErrorLog.Print("Got runlevel:", i, "[done]")
+
 }
 
 // ConfigPath adds a path to a JSON file to be used as the config file

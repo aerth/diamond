@@ -90,7 +90,7 @@ func (s *Server) Status() string {
 		return ""
 	}
 	str := listnstr(s.level)
-	return fmt.Sprintf("Server Name: %s\nVersion: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
+	return fmt.Sprintf("Server Name: %s\nDiamond Version: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
 		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
 		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
 		s.Config.Name, version, s.level, s.Config.Debug,

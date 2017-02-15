@@ -103,7 +103,6 @@ func parseconf(c *ConfigFields) error {
 // Transfer the values of ConfigFields to s.Config
 func (s *Server) doconfig(conf *ConfigFields) error {
 	if s.Config == nil {
-
 		s.Config = &ConfigFields{}
 	}
 	if conf.Addr != "" {
@@ -125,7 +124,6 @@ func (s *Server) doconfig(conf *ConfigFields) error {
 	if s.Config.Socket == "" {
 		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
 		if er != nil {
-
 			return er
 		}
 		os.Remove(tmpfile.Name())
