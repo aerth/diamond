@@ -25,8 +25,10 @@ echo '
        *
 '
 # ensure we are being ran as 'bin/build.sh'
-if [ "$0" != "bin/build.sh" ]; then
-echo "Environment Error\n\tPlease change directory to: \"\$GOPATH/src/github.com/aerth/diamond\",\n\tBuild diamond tools using the command: \"bin/build.sh\"\n"
+if [ "$0" != "build/make.sh" ]; then
+echo "Environment Error"
+echo "Please change directory to: \"\$GOPATH/src/github.com/aerth/diamond\""
+echo "Build diamond tools using the command: \"build/make.sh\""
 exit 1
 fi
 
@@ -63,15 +65,15 @@ test() {
 }
 # 'bin/build.sh admin'
 build_admin() {
-        cd $DIAMOND/cmd/diamond-admin && make && mv diamond-admin $DIAMOND/diamond-admin
+        cd $DIAMOND/cmd/diamond-admin && make && mkdir -p $DIAMOND/bin && mv diamond-admin $DIAMOND/bin/diamond-admin
 }
 # 'bin/build.sh server'
 build_server() {
-       cd $DIAMOND/cmd/diamondd/ && make && mv diamondd $DIAMOND/diamondd
+       cd $DIAMOND/cmd/diamondd/ && make && mkdir -p $DIAMOND/bin && mv diamondd $DIAMOND/bin/diamondd
 }
 # 'bin/build.sh custom'
 build_custom() {
-       cd $DIAMOND/cmd/diamondd/ && make && mv diamondd $DIAMOND/diamondd
+       cd $DIAMOND/cmd/diamondd/ && make && mkdir -p $DIAMOND/bin && mv diamondd $DIAMOND/bin/diamondd
 }
 
 
