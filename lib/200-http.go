@@ -39,15 +39,6 @@ func (s *Server) serveHTTP() {
 		return
 	}
 
-	if s.Config.Debug {
-		s.ErrorLog.Print("HTTP Processing")
-	}
-
-	if s.listenerTCP == nil {
-
-		s.lock.Unlock()
-		return
-	}
 
 	if s.listenerTCP.TCPListener == nil {
 		s.lock.Unlock()
@@ -58,6 +49,9 @@ func (s *Server) serveHTTP() {
 		s.ErrorLog.Print("Silly")
 		s.lock.Unlock()
 		return
+	}
+	if s.Config.Debug {
+		s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
 	}
 	go func(listen *stoplisten.StoppableListener) {
 		//time.Sleep(100 * time.Millisecond)
