@@ -2,6 +2,8 @@
 package diamond
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,6 +30,7 @@ func NewServer(mux ...http.Handler) *Server {
 		n.mux = mux[0]
 	} else {
 		n.mux = http.DefaultServeMux
+
 	}
 
 	srv := &http.Server{Handler: n.mux}
@@ -39,6 +42,11 @@ func NewServer(mux ...http.Handler) *Server {
 	return n
 }
 
+// SetMux server
+func (srv *Server) SetMux(mux http.Handler) {
+	srv.mux = mux
+}
+
 // SetConfigPath path
 func (s *Server) SetConfigPath(path string) {
 	s.configpath = path
@@ -48,6 +56,9 @@ func (s *Server) SetConfigPath(path string) {
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() error {
 	fmt.Println("Diamond Construct ⋄", version, "Initialized")
+	if s.configpath == "" {
+		return errors.New("no config file")
+	}
 	config, e := readconf(s.configpath)
 	if e != nil {
 		os.MkdirAll(filepath.Dir(s.configpath), 0755)
@@ -142,12 +153,11 @@ func (s *Server) ConfigPath(path string) error {
 // If server s is created, and then s.Config(b) is used before Start(), config.json is not read.
 // If s.Config(b) is not used, config.json or -config flag will be used.
 func (s *Server) Configure(b []byte) error {
-
-	config, e := readconfigJSON(b)
-	if e != nil {
-		return e
+	config := new(ConfigFields)
+	err := json.Unmarshal(b, config)
+	if err != nil {
+		return err
 	}
-
 	return s.doconfig(config)
 
 }

@@ -52,32 +52,9 @@ func readconf(path string) (*ConfigFields, error) {
 	if b == nil {
 		return &ConfigFields{}, errors.New("Empty: " + path)
 	}
-	return readconfigJSON(b)
-}
-func readconfigJSON(b []byte) (*ConfigFields, error) {
-	var c *ConfigFields
-	e := json.Unmarshal(b, &c)
-	if e != nil {
-		return nil, e
-	}
-
-	// All fields are blank
-	if c.Addr == "" && !c.Debug && c.Level == 0 && c.Name == "" && c.Socket == "" {
-		return nil, errors.New("Bad config, need fields: Name, Socket, Addr, Debug")
-	}
-	//
-	// //unexport values
-	// c.Addr = bigc.Addr
-	// c.debug = bigc.Debug
-	// c.kickable = bigc.Kickable
-	// c.kicks = bigc.Kicks
-	// c.Level = bigc.Level
-	// c.log = bigc.Log
-	// c.name = bigc.Name
-	// c.Socket = bigc.Socket
-
-	// Some blank are OK
-	return c, parseconf(c)
+	config := new(ConfigFields)
+	err := json.Unmarshal(b, config)
+	return config, err
 }
 
 func parseconf(c *ConfigFields) error {
