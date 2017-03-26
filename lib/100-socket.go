@@ -87,7 +87,11 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		if e != nil {
 			*reply = e.Error()
 		}
-		p.parent.doconfig(conf)
+		p.parent.Config = conf
+		err := p.parent.ReloadConfig()
+		if err != nil {
+			*reply = err.Error()
+		}
 		cur := p.parent.level
 		if cur != 1 {
 			p.parent.telinit <- 1 // close http listener

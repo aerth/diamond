@@ -180,8 +180,7 @@ func (s *Server) dolog() error {
 	}
 	// user didn't chose stdout
 	if s.Config.Log != stdout {
-
-		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0700)
+		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, CHMODFILE)
 		if err == nil {
 			s.ErrorLog.SetOutput(f)
 		}

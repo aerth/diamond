@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -24,6 +23,7 @@ type ConfigFields struct {
 	Log         string // directory to write logs
 }
 
+// Save config to file (JSON)
 func (config *ConfigFields) Save(filename string) (n int, err error) {
 	b, err := json.Marshal(config)
 	if err != nil {
@@ -40,6 +40,7 @@ func (config *ConfigFields) Save(filename string) (n int, err error) {
 
 	return file.Write(b)
 }
+
 func readconf(path string) (*ConfigFields, error) {
 	b, e := ioutil.ReadFile(path)
 	if e != nil {
@@ -93,47 +94,48 @@ func parseconf(c *ConfigFields) error {
 	return e1
 }
 
-// Transfer the values of ConfigFields to s.Config
-func (s *Server) doconfig(conf *ConfigFields) error {
-	if s.Config == nil {
-		s.Config = new(ConfigFields)
-	}
-	if conf == nil {
-		return errors.New("Need config location")
-	}
-	if conf.Addr != "" {
-		s.Config.Addr = conf.Addr
-	}
-	if conf.Debug {
-		s.Config.Debug = conf.Debug
-	}
-	if conf.Name != "" {
-		s.Config.Name = conf.Name
-	}
-	if conf.Socket != "" {
-		s.Config.Socket = conf.Socket
-	}
-
-	if s.Config.Debug {
-		s.ErrorLog.SetFlags(log.Lshortfile)
-	}
-	if s.Config.Socket == "" {
-		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
-		if er != nil {
-			return er
-		}
-		os.Remove(tmpfile.Name())
-		s.Config.Socket = tmpfile.Name()
-	}
-	if s.Config.Name == "" {
-		s.Config.Name = "⋄ Diamond"
-	}
-	s.Config.Level = conf.Level
-	if s.Config.Level != 3 && s.Config.Level != 1 {
-		s.Config.Level = 1
-	}
-	s.Config.Kickable = conf.Kickable
-	s.Config.Kicks = conf.Kicks
-	s.Config.Log = conf.Log
-	return nil
-}
+//
+// // Transfer the values of ConfigFields to s.Config
+// func (s *Server) doconfig(conf *ConfigFields) error {
+// 	if s.Config == nil {
+// 		s.Config = new(ConfigFields)
+// 	}
+// 	if conf == nil {
+// 		return errors.New("Need config location")
+// 	}
+// 	if conf.Addr != "" {
+// 		s.Config.Addr = conf.Addr
+// 	}
+// 	if conf.Debug {
+// 		s.Config.Debug = conf.Debug
+// 	}
+// 	if conf.Name != "" {
+// 		s.Config.Name = conf.Name
+// 	}
+// 	if conf.Socket != "" {
+// 		s.Config.Socket = conf.Socket
+// 	}
+//
+// 	if s.Config.Debug {
+// 		s.ErrorLog.SetFlags(log.Lshortfile)
+// 	}
+// 	if s.Config.Socket == "" {
+// 		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
+// 		if er != nil {
+// 			return er
+// 		}
+// 		os.Remove(tmpfile.Name())
+// 		s.Config.Socket = tmpfile.Name()
+// 	}
+// 	if s.Config.Name == "" {
+// 		s.Config.Name = "⋄ Diamond"
+// 	}
+// 	s.Config.Level = conf.Level
+// 	if s.Config.Level != 3 && s.Config.Level != 1 {
+// 		s.Config.Level = 1
+// 	}
+// 	s.Config.Kickable = conf.Kickable
+// 	s.Config.Kicks = conf.Kicks
+// 	s.Config.Log = conf.Log
+// 	return nil
+// }
