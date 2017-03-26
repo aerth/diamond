@@ -73,7 +73,6 @@ func (s *Server) serveHTTP() {
 		}
 
 		// unlock RIGHT BEFORE SERVING or a telinit 1 could mess this all up
-		s.ErrorLog.Printf("Listening on: %s", s.listenerTCP.Addr().String())
 		s.lock.Unlock()
 		e := s.Server.Serve(listen)
 		if e != nil {

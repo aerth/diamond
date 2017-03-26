@@ -118,8 +118,6 @@ func (s *Server) runlevel6() {
 		}
 		s.listenerTCP.Stop()
 
-		
-
 	}
 
 	if s.listenerTCP != nil {
