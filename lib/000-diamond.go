@@ -73,6 +73,7 @@ func (s *Server) Start() error {
 		fmt.Println("Could not socket")
 		os.Exit(2)
 	}
+
 	cycleTest := func() {
 		s.ErrorLog.Printf("Cycle test")
 		switch s.Config.Level {
