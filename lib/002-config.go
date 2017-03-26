@@ -103,7 +103,10 @@ func parseconf(c *ConfigFields) error {
 // Transfer the values of ConfigFields to s.Config
 func (s *Server) doconfig(conf *ConfigFields) error {
 	if s.Config == nil {
-		s.Config = &ConfigFields{}
+		s.Config = new(ConfigFields)
+	}
+	if conf == nil {
+		return errors.New("Need config location")
 	}
 	if conf.Addr != "" {
 		s.Config.Addr = conf.Addr
