@@ -16,6 +16,7 @@ import (
 
 var (
 	sock = flag.String("s", "/tmp/diamond.socket", "path to socket")
+	refreshtime = flag.Duration("r", time.Minute*30, "refresh status duration")
 )
 
 const (
@@ -142,7 +143,7 @@ Start:
 		//mm.GetScreen().Show()
 		// Reset timeout
 
-		case <-time.After(10000 * time.Millisecond):
+		case <-time.After(*refreshtime):
 
 			cmd = cmdStatus
 			// clix.Eat(mm.GetScreen(), 2)
