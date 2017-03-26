@@ -44,6 +44,11 @@ func NewServer(mux ...http.Handler) *Server {
 // SetMux server
 func (s *Server) SetMux(mux http.Handler) {
 	s.mux = mux
+	srv := &http.Server{Handler: s.mux}
+	srv.ReadTimeout = time.Duration(time.Second)
+	srv.ConnState = s.connState
+	srv.ErrorLog = s.ErrorLog
+	s.Server = srv
 }
 
 // SetConfigPath path
