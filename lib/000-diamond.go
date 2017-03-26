@@ -60,10 +60,6 @@ func (s *Server) Start() error {
 	}
 	s.doconfig(config)
 
-	if s.Config.Debug {
-		fmt.Println(s.Config)
-	}
-
 	// Socket listen timeout
 	done := make(chan int, 1)
 	go admin(done, s) // listen on unix socket
