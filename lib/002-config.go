@@ -24,11 +24,27 @@ type ConfigFields struct {
 	Log         string // directory to write logs
 }
 
+func (config *ConfigFields) Save(filename string) (n int, err error) {
+	b, err := json.Marshal(config)
+	if err != nil {
+		return 0, err
+	}
+
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
+	if err != nil {
+		return 0, err
+	}
+	if err := file.Truncate(0); err != nil {
+		return 0, err
+	}
+
+	return file.Write(b)
+}
 func readconf(path string) (*ConfigFields, error) {
 	b, e := ioutil.ReadFile(path)
 	if e != nil {
-		if !strings.Contains(e.Error(), "No such") {
-			fmt.Println("⋄ Load Config:", e)
+		if !strings.Contains(e.Error(), "no such") {
+			fmt.Println("⋄ config error", e)
 			return nil, nil // return no error, no config
 		}
 		return &ConfigFields{}, e
@@ -67,7 +83,7 @@ func readconfigJSON(b []byte) (*ConfigFields, error) {
 func parseconf(c *ConfigFields) error {
 	var e1, e2 error
 	if c == nil {
-		return errors.New("Bad Config")
+		return nil
 	}
 	// Check valid ADDR
 	if c.Addr != "" {
@@ -142,6 +158,5 @@ func (s *Server) doconfig(conf *ConfigFields) error {
 	s.Config.Kickable = conf.Kickable
 	s.Config.Kicks = conf.Kicks
 	s.Config.Log = conf.Log
-	s.configured = true // mark server configured
 	return nil
 }

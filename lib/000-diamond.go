@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -38,21 +39,26 @@ func NewServer(mux ...http.Handler) *Server {
 	return n
 }
 
+// SetConfigPath path
+func (s *Server) SetConfigPath(path string) {
+	s.configpath = path
+}
+
 // Start the Diamond Construct. Should be done after Configuration.
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() error {
 	fmt.Println("Diamond Construct ⋄", version, "Initialized")
-	if !s.configured {
-		s.ErrorLog.Print("Diamond started without configuration.")
-		config, e := readconf(s.configpath)
-		if e != nil {
-			s.ErrorLog.Print("Bad config:", e)
-			os.Exit(2)
+	config, e := readconf(s.configpath)
+	if e != nil {
+		os.MkdirAll(filepath.Dir(s.configpath), 0755)
+		n, err := config.Save(s.configpath)
+		if err != nil {
+			s.ErrorLog.Print("Bad config:", err)
+			os.Exit(1)
 		}
-
-		s.doconfig(config)
-
+		fmt.Println(n, "bytes written to", s.configpath)
 	}
+	s.doconfig(config)
 
 	if s.Config.Debug {
 		fmt.Println(s.Config)
