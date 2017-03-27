@@ -161,7 +161,7 @@ func (s *Server) telcom() {
 
 			case 4:
 				s.ErrorLog.Printf("Shifting to runlevel 4")
-				s.runlevel4()
+				s.Runlevel4()
 				time.Sleep(300 * time.Millisecond)
 				s.ErrorLog.Printf("Shifted to runlevel 4")
 			default:

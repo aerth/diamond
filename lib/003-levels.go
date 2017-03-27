@@ -10,6 +10,16 @@ import (
 	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
+// HookLevels are called at the end of each runlevel
+var (
+	HookLevel0 = func(){}
+	HookLevel1 = func(){}
+	HookLevel2 = func(){}
+	HookLevel3 = func(){}
+	HookLevel4 = func(){}
+)
+
+
 func socketExists(path string) bool {
 
 	_, e := os.Open(path)
@@ -40,6 +50,7 @@ func (s *Server) runlevel0() {
 	if s.Config.Log != "stdout" {
 		fmt.Println("Goodbye!")
 	}
+	HookLevel0()
 	os.Exit(0)
 }
 
@@ -49,6 +60,7 @@ func (s *Server) runlevel1() {
 	s.runlevel6() // stop listener
 	s.level = 1
 	time.Sleep(1 * time.Second)
+	HookLevel1()
 	s.lock.Unlock()
 
 }
@@ -91,7 +103,7 @@ func (s *Server) runlevel3() {
 	//	s.handlerTCP = s.mux
 
 	s.level = 3
-
+	HookLevel3()
 	s.serveHTTP()
 
 }
