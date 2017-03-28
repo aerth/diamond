@@ -51,7 +51,6 @@ func (s *Server) runlevel0() {
 		fmt.Println("Goodbye!")
 	}
 	HookLevel0()
-	os.Exit(0)
 }
 
 // single user mode

@@ -72,7 +72,6 @@ func (s *Server) signalcatch() {
 		case sig := <-quitchan:
 			fmt.Println("Diamond got signal:", sig.String())
 			s.Runlevel(0)
-			os.Exit(0)
 		}
 
 	}()
