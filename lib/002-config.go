@@ -21,11 +21,14 @@ type ConfigFields struct {
 	Kickable    bool   // able to be kicked
 	DoCycleTest bool   // do 1-3-default cycle at launch
 	Log         string // directory to write logs
+	TLSAddr     string // TLS Addr required for TLS
+	TLSCertFile string // TLS Certificate file location required for TLS
+	TLSKeyFile  string // TLS Key file location required for TLS
 }
 
 // Save config to file (JSON)
-func (config *ConfigFields) Save(filename string) (n int, err error) {
-	b, err := json.Marshal(config)
+func (config ConfigFields) Save(filename string) (n int, err error) {
+	b, err := json.MarshalIndent(config, " ", " ")
 	if err != nil {
 		return 0, err
 	}
@@ -37,32 +40,29 @@ func (config *ConfigFields) Save(filename string) (n int, err error) {
 	if err := file.Truncate(0); err != nil {
 		return 0, err
 	}
-
+	b = append(b, "\n"...)
 	return file.Write(b)
 }
 
-func readconf(path string) (*ConfigFields, error) {
+func readconf(path string) (ConfigFields, error) {
 	b, e := ioutil.ReadFile(path)
 	if e != nil {
 		if !strings.Contains(e.Error(), "no such") {
 			fmt.Println("⋄ config error", e)
-			return nil, nil // return no error, no config
+			return ConfigFields{}, nil // return no error, no config
 		}
-		return &ConfigFields{}, e
+		return ConfigFields{}, e
 	}
 	if b == nil {
-		return &ConfigFields{}, errors.New("Empty: " + path)
+		return ConfigFields{}, errors.New("Empty: " + path)
 	}
-	config := new(ConfigFields)
-	err := json.Unmarshal(b, config)
+	config := ConfigFields{}
+	err := json.Unmarshal(b, &config)
 	return config, err
 }
 
-func parseconf(c *ConfigFields) error {
+func parseconf(c ConfigFields) error {
 	var e1, e2 error
-	if c == nil {
-		return nil
-	}
 	// Check valid ADDR
 	if c.Addr != "" {
 		_, e1 = net.ResolveTCPAddr("tcp", c.Addr)
@@ -93,49 +93,3 @@ func parseconf(c *ConfigFields) error {
 	}
 	return e1
 }
-
-//
-// // Transfer the values of ConfigFields to s.Config
-// func (s *Server) doconfig(conf *ConfigFields) error {
-// 	if s.Config == nil {
-// 		s.Config = new(ConfigFields)
-// 	}
-// 	if conf == nil {
-// 		return errors.New("Need config location")
-// 	}
-// 	if conf.Addr != "" {
-// 		s.Config.Addr = conf.Addr
-// 	}
-// 	if conf.Debug {
-// 		s.Config.Debug = conf.Debug
-// 	}
-// 	if conf.Name != "" {
-// 		s.Config.Name = conf.Name
-// 	}
-// 	if conf.Socket != "" {
-// 		s.Config.Socket = conf.Socket
-// 	}
-//
-// 	if s.Config.Debug {
-// 		s.ErrorLog.SetFlags(log.Lshortfile)
-// 	}
-// 	if s.Config.Socket == "" {
-// 		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
-// 		if er != nil {
-// 			return er
-// 		}
-// 		os.Remove(tmpfile.Name())
-// 		s.Config.Socket = tmpfile.Name()
-// 	}
-// 	if s.Config.Name == "" {
-// 		s.Config.Name = "⋄ Diamond"
-// 	}
-// 	s.Config.Level = conf.Level
-// 	if s.Config.Level != 3 && s.Config.Level != 1 {
-// 		s.Config.Level = 1
-// 	}
-// 	s.Config.Kickable = conf.Kickable
-// 	s.Config.Kicks = conf.Kicks
-// 	s.Config.Log = conf.Log
-// 	return nil
-// }

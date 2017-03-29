@@ -1,7 +1,6 @@
 package diamond
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -12,45 +11,35 @@ import (
 
 // HookLevels are called at the end of each runlevel
 var (
-	HookLevel0 = func(){}
-	HookLevel1 = func(){}
-	HookLevel2 = func(){}
-	HookLevel3 = func(){}
-	HookLevel4 = func(){}
+	HookLevel0 = func() {}
+	HookLevel1 = func() {}
+	HookLevel2 = func() {}
+	HookLevel3 = func() {}
+	HookLevel4 = func() {}
 )
 
-
 func socketExists(path string) bool {
-
 	_, e := os.Open(path)
 	if e != nil {
 		if strings.Contains(e.Error(), "no such") {
 			return false
 		}
 	}
-
 	return true
 }
 
 // tear down and exit
 func (s *Server) runlevel0() {
 	s.ErrorLog.Printf("Shifted to runlevel 0")
-
+	defer HookLevel0()
 	if s.listenerSocket == nil {
-		s.ErrorLog.Printf("Goodbye!")
-		os.Exit(0)
+		s.ErrorLog.Printf("Socket disappeared")
+		return
 	}
-
 	e := s.listenerSocket.Close()
 	if e != nil {
 		s.ErrorLog.Printf("%s", e)
 	}
-	// exit code 0
-	s.ErrorLog.Printf("Goodbye!")
-	if s.Config.Log != "stdout" {
-		fmt.Println("Goodbye!")
-	}
-	HookLevel0()
 }
 
 // single user mode

@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	sock = flag.String("s", "/tmp/diamond.socket", "path to socket")
+	sock        = flag.String("s", "/tmp/diamond.socket", "path to socket")
 	refreshtime = flag.Duration("r", time.Minute*30, "refresh status duration")
 )
 

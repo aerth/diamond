@@ -1,5 +1,6 @@
 // The most simple Diamond ⋄ server
 package main
+
 import "time"
 
 import diamond "github.com/aerth/diamond/lib" // ⋄
@@ -24,27 +25,26 @@ func main() {
 
 	// redefine HookLevel0
 	quitchan := make(chan string, 1)
-	diamond.HookLevel0 = func(){
+	diamond.HookLevel0 = func() {
 		quitchan <- "goodbye!"
 	}
 
 	// wait three seconds, switch gears
-	go func(){
-		<- time.After(3*time.Second)
+	go func() {
+		<-time.After(3 * time.Second)
 		println("[demo] Switching gears to 3")
 		d.Runlevel(3)
-		<- time.After(3*time.Second)
+		<-time.After(3 * time.Second)
 		println("[demo] Switching gears to 1")
 		d.Runlevel(1)
-		<- time.After(3*time.Second)
+		<-time.After(3 * time.Second)
 		println("[demo] Switching gears to 3")
 		d.Runlevel(3)
 	}()
 
-
 	// wait for quitchan
 	select {
-	case cya := <- quitchan :
+	case cya := <-quitchan:
 		println(cya)
 	}
 

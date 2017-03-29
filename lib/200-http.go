@@ -39,7 +39,6 @@ func (s *Server) serveHTTP() {
 		return
 	}
 
-
 	if s.listenerTCP.TCPListener == nil {
 		s.lock.Unlock()
 		return

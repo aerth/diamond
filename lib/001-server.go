@@ -16,7 +16,7 @@ import (
 	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
-const stdout = "stdout"
+const stderr = "stderr"
 
 // Server runlevels
 // *  0 = halt (os.Exit(0))
@@ -32,7 +32,7 @@ type Server struct {
 	// runlevel
 	level int
 
-	// Log out to where ever, default stdout
+	// Log out to where ever, default stderr
 	ErrorLog *log.Logger
 
 	// Socket listener that accepts admin commands
@@ -41,11 +41,11 @@ type Server struct {
 	// TCP Listener that can be stopped
 	listenerTCP *stoplisten.StoppableListener
 	listenlock  sync.Mutex
-	telinit     chan int      // accepts runlevel requests
-	lock        sync.Mutex    // guards only shifting between runlevels
-	Config      *ConfigFields // parsed config
-	configpath  string        // path to config file
-	configured  bool          // has been configured
+	telinit     chan int     // accepts runlevel requests
+	lock        sync.Mutex   // guards only shifting between runlevels
+	Config      ConfigFields // parsed config
+	configpath  string       // path to config file
+	configured  bool         // has been configured
 
 	numconn, allconn int          // count connections, used by s.Status()
 	counter          sync.Mutex   // guards only conn counter writes
@@ -171,14 +171,14 @@ func (s *Server) telcom() {
 	}
 }
 
-// switch to log file if not stdout
+// switch to log file if not stderr
 func (s *Server) dolog() error {
-	// empty logfile string is stdout
+	// empty logfile string is stderr
 	if s.Config.Log == "" {
-		s.Config.Log = stdout
+		s.Config.Log = stderr
 	}
-	// user didn't chose stdout
-	if s.Config.Log != stdout {
+	// user didn't chose stderr
+	if s.Config.Log != stderr {
 		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, CHMODFILE)
 		if err == nil {
 			s.ErrorLog.SetOutput(f)
@@ -186,7 +186,7 @@ func (s *Server) dolog() error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("Diamond log:", s.Config.Log)
+		fmt.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
 	}
 	return nil
 }

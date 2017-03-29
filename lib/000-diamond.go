@@ -38,6 +38,15 @@ func NewServer(mux ...http.Handler) *Server {
 	srv.ErrorLog = s.ErrorLog
 	s.Server = srv
 
+	// default config
+	s.Config = ConfigFields{}
+	s.Config.Addr = "127.0.0.1:8000"
+	s.Config.Kickable = true
+	s.Config.Kicks = true
+	s.Config.Name = "Diamond ⋄"
+	s.Config.Socket = os.TempDir() + "diamond.sock"
+	s.Config.DoCycleTest = false
+	s.Config.Level = 3
 	return s
 }
 
