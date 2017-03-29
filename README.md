@@ -4,7 +4,11 @@
 
 Turn your HTTP web application into a machine.
 
-Like a transmission, a diamond server has "gears". They are called "runlevels".
+Like a transmission, a diamond server has "gears". They are called "runlevels". You can define functions that are called when shifting to a runlevel. These are called:
+
+  * ```diamond.HookLevel0``` runs when 0 is reached, before sending to quitchan
+  * ```diamond.HookLevel1``` runs when 1 is reached
+  * ```diamond.HookLevel3``` runs when 3 is reached
 
 ![Screenshot of both diamond-admin and diamond server](https://github.com/aerth/diamond/blob/master/example/diamond-screenshot.png?raw=true)
 
@@ -14,20 +18,29 @@ The server can boot without listening, then the admin can shift gears into the
 While not listening, *another server* (possible another **diamond**) can occupy that port.
 Configuration allows a "default runlevel", either 1 or 3.
 
+```
+var quitchan = make(chan string, 1)
+diamond.HookLevel0 = func() {
+  quitchan <- "runlevel 0 attained"
+}
+```
 
 Diamond allows the administrator (via UNIX socket)
 to do more than just start and stop the process.
 
+```
+diamond-admin -s $SOCKETNAME
+```
+
+
 Now your application has runlevels!
+
+```d.Loop() blocks until runlevel 0 has been reached```
 
 Once connected to the UNIX socket, the administrator can:
 
   * Switch runtime levels
-  * Upgrade (git pull && make)
   * Redeploy (respawn the binary)
-  * Reconfigure
-  * Archive Backup
-  * Restore from Archived Backup
 
 In runlevel 1,
         only the local administrator may access the server using the UNIX socket.
@@ -37,18 +50,17 @@ In runlevel 3,
 
 This project is split into three sections.
 
+**Library, Admin, Example Server**
+
 ## 1. diamond library
 
 ```
-srv := diamond.NewServer(route)
-err := srv.ConfigPath("config.json")
-// do something with err
-mux := route() // func route() *mux.Router {}
-err = srv.Start()
-// do something with err
-select {
-        case <-srv.Quit:
-}
+d := diamond.NewServer(nil)
+d.ErrorLog.SetOutput(mylogfile)
+d.ConfigPath("config.json")
+d.SetMux(myrouter)
+d.Start()
+d.Loop()
 
 ```
 
@@ -97,7 +109,7 @@ Adminstrative user must be the same unix user as the server.
 
 Commands:
 
-  * telinit 0-6 - Tell the server to initialize runlevel X
+  * telinit 0-4 - Tell the server to initialize runlevel X
   * restart - Return to default runlevel
   * stop - Short for telinit 0
   * load - Load a configuration file (see CONFIG FILE)
@@ -161,10 +173,6 @@ bin/build.sh server
 bin/build.sh all # builds both
 ```
 
-## Future
-
-  * Customizable / additional runlevels
-
 ## Reporting issues, Contributing
 
 Please submit a pull request if:
@@ -175,7 +183,6 @@ Please submit a pull request if:
 
 Please submit a new github issue if:
 
-  * You are thinking about adding a new feature
   * You have encountered a bug while using diamond
   * You have a question about an undocumented feature
 
