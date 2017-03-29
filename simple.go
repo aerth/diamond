@@ -1,5 +1,6 @@
 // The most simple Diamond ⋄ server
 package main
+import "time"
 
 import diamond "github.com/aerth/diamond/lib" // ⋄
 /*
@@ -7,17 +8,46 @@ This Diamond only serves 404 pages!
 */
 func main() {
 	// Create new diamond.Server
-	s := diamond.NewServer()
-	s.ErrorLog.Println("Open in browser: http://127.0.0.1:8777/status")
-	// Try config.json
-	e := s.ConfigPath("config.json")
-	if e != nil {
-		s.Configure(ccc)
+	d := diamond.NewServer(nil)
+	d.Config.Name = "Diamond Demo ⋄"
+	d.Config.Level = 1 // in three seconds we will switch gears
+	println(d.Config.Name)
+	n, _ := d.Config.Save("config.json")
+	println("saved", n, "bytes to config.json")
+	d.ConfigPath("config.json")
+
+	// start in d.Config.Level
+	err := d.Start()
+	if err != nil {
+		println(err.Error())
 	}
-	// Start the server, using a nil handler (404 for every page)
-	s.Start()
-	// Just keep doing that
-	select {}
+
+	// redefine HookLevel0
+	quitchan := make(chan string, 1)
+	diamond.HookLevel0 = func(){
+		quitchan <- "goodbye!"
+	}
+
+	// wait three seconds, switch gears
+	go func(){
+		<- time.After(3*time.Second)
+		println("[demo] Switching gears to 3")
+		d.Runlevel(3)
+		<- time.After(3*time.Second)
+		println("[demo] Switching gears to 1")
+		d.Runlevel(1)
+		<- time.After(3*time.Second)
+		println("[demo] Switching gears to 3")
+		d.Runlevel(3)
+	}()
+
+
+	// wait for quitchan
+	select {
+	case cya := <- quitchan :
+		println(cya)
+	}
+
 }
 
 var ccc = []byte(`{
