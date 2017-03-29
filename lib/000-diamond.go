@@ -78,7 +78,7 @@ func (s *Server) ReloadConfig() error {
 	config, e := readconf(s.configpath)
 	if e != nil {
 		os.MkdirAll(filepath.Dir(s.configpath), CHMODDIR)
-		n, err := config.Save(s.configpath)
+		n, err := s.SaveConfig(s.configpath)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (s *Server) ReloadConfig() error {
 // Start the Diamond Construct. Should be done after Configuration.
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() (err error) {
-	fmt.Fprintln(os.Stderr, "Diamond Construct ⋄", version, "Initialized")
+	s.ErrorLog.Println("Diamond Construct ⋄", version, "Initialized")
 
 	err = s.ReloadConfig()
 	if err != nil {

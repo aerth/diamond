@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ConfigFields fields are exported only so that JSON can be read from the config file.
+// ConfigFields fields
 type ConfigFields struct {
 	Name        string // user friendly name
 	Addr        string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
@@ -27,21 +27,32 @@ type ConfigFields struct {
 }
 
 // Save config to file (JSON)
-func (config ConfigFields) Save(filename string) (n int, err error) {
+func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
+	config := s.Config
 	b, err := json.MarshalIndent(config, " ", " ")
 	if err != nil {
-		return 0, err
+		return n, err
 	}
-
+	if filenames == nil {
+		filenames = []string{s.configpath}
+	}
+for _, filename := range filenames {
+	var n1 int
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
 	if err != nil {
-		return 0, err
+		return n, err
 	}
-	if err := file.Truncate(0); err != nil {
-		return 0, err
+	if err = file.Truncate(0); err != nil {
+		return n, err
 	}
 	b = append(b, "\n"...)
-	return file.Write(b)
+	n1, err = file.Write(b)
+	n += n1
+	if err != nil {
+		return n1, err
+	}
+}
+return n, nil
 }
 
 func readconf(path string) (ConfigFields, error) {

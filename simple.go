@@ -11,9 +11,10 @@ func main() {
 	// Create new diamond.Server
 	d := diamond.NewServer(nil)
 	d.Config.Name = "Diamond Demo ⋄"
+	d.SetConfigPath("config.json")
 	d.Config.Level = 1 // in three seconds we will switch gears
 	println(d.Config.Name)
-	n, _ := d.Config.Save("config.json")
+	n, _ := d.SaveConfig()
 	println("saved", n, "bytes to config.json")
 	d.ConfigPath("config.json")
 
