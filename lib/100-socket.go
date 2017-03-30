@@ -2,7 +2,6 @@ package diamond
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/rpc"
 	"os"
@@ -30,8 +29,6 @@ func (s *Server) socketListen(path string) error {
 
 // rpcpacket to be sent by socket, has Command method for clients to use.
 type rpcpacket struct {
-	// Name   string
-	// Body   string
 	parent *Server // unexported so that only Command can access
 }
 
@@ -144,21 +141,33 @@ func (s *Server) socketAccept() error {
 
 // Listen on s.Config.Socket for admin connections
 func admin(ch chan int, s *Server) {
+	var try int = 1
 Okay:
 	if s.Config.Socket == "" {
-		exit("Blank socket")
+		s.ErrorLog.Println("please specify where to create socket")
+		s.Runlevel(0)
 		return
 	}
 	addr, _ := net.ResolveUnixAddr("unix", s.Config.Socket)
 	r, e := net.DialUnix("unix", nil, addr)
 	if e != nil {
 		if !strings.Contains(e.Error(), "no such") {
+		try++
+		if try == 2 {
+			if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
+			 s.ErrorLog.Printf("%s", e)
+		 }
+			s.ErrorLog.Println("replacing stale socket")
+			os.Remove(s.Config.Socket)
+			goto Okay
+		}
+
+			s.ErrorLog.Printf("%s", e)
 			s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.Config.Socket)
 			s.ErrorLog.Printf("You may safely delete it if there are no running Diamond processes.")
-			if s.Config.Debug {
-				s.ErrorLog.Printf("%s", e)
-			}
-			os.Exit(2)
+
+			s.Runlevel(0)
+			return
 		}
 	} else {
 		if s.Config.Debug {
@@ -172,18 +181,23 @@ Okay:
 				time.Sleep(100 * time.Millisecond)
 				goto Okay
 			}
-			exit("There is already a running server with socket: " +
+			s.ErrorLog.Println("There is already a running server with socket: " +
 				s.Config.Socket + ". We tried kicking, but it replied with: " + out)
+			s.Runlevel(0)
+			return
 		}
-		exit("There is already a running server with socket: " +
+		s.ErrorLog.Println("There is already a running server with socket: " +
 			s.Config.Socket +
 			". If you want to replace it, use {\"Kick\": true} in Config.")
+		s.Runlevel(0)
+		return
 
 	}
 	e = s.socketListen(s.Config.Socket)
 	if e != nil {
-		log.Println("eek:", e)
-		panic(e)
+		s.ErrorLog.Println("eek:", e)
+		s.Runlevel(0)
+		return
 	}
 	s.socketed = true
 	ch <- 1

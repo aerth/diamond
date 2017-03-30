@@ -85,11 +85,6 @@ func (s *Server) ReloadConfig() error {
 		fmt.Fprintln(os.Stderr, n, "bytes written to", s.configpath)
 	}
 	s.Config = config
-
-	if s.Config.Debug {
-		s.ErrorLog.SetFlags(log.Lshortfile)
-	}
-
 	if s.Config.Socket == "" {
 		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
 		if er != nil {
@@ -204,9 +199,4 @@ func (s *Server) Configure(b []byte) error {
 	}
 	return s.ReloadConfig()
 
-}
-
-func exit(i interface{}) {
-	fmt.Fprintln(os.Stderr, i)
-	os.Exit(2)
 }

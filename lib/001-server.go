@@ -65,7 +65,7 @@ func (s *Server) signalcatch() {
 		return
 	}
 	quitchan := make(chan os.Signal, 1)
-	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT)
+	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
 
 	go func() {
 		select {
@@ -134,13 +134,13 @@ func (s *Server) telcom() {
 			s.lock.Lock()
 			s.lock.Unlock()
 
-			if s.Config.Debug {
-				s.ErrorLog.Printf("runlevel request: %v", newlevel)
-			}
 
 			switch newlevel {
+			case -1:
+				s.ErrorLog.Println("TELCOM down")
+			return
 			case 0:
-
+				s.ErrorLog.Printf("Shifting to runlevel 0")
 				s.runlevel0()
 				for {
 					time.Sleep(1 * time.Second)
