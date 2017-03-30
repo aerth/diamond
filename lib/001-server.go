@@ -70,7 +70,8 @@ func (s *Server) signalcatch() {
 	go func() {
 		select {
 		case sig := <-quitchan:
-			fmt.Println("Diamond got signal:", sig.String())
+			println("Diamond got signal:", sig.String()) // stderr
+			s.ErrorLog.Println("Diamond got signal:", sig.String())
 			s.Runlevel(0)
 		}
 
