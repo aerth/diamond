@@ -36,6 +36,10 @@ select {
 }
 ```
 
+### CountConnections
+
+```func (s *Server) CountConnections() int64 {}```
+
 ## Notes
 
   * How to TLS with Diamond Server?

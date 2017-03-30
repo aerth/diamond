@@ -47,7 +47,7 @@ type Server struct {
 	configpath  string       // path to config file
 	configured  bool         // has been configured
 
-	numconn, allconn int          // count connections, used by s.Status()
+	numconn, allconn int64        // count connections, used by s.Status()
 	counter          sync.Mutex   // guards only conn counter writes
 	mux              http.Handler // given by package main in with s.Start(mux http.Handler)
 	Server           *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
@@ -91,7 +91,8 @@ func (s *Server) Status() string {
 		return ""
 	}
 	str := listnstr(s.level)
-	return fmt.Sprintf("Server Name: %s\nDiamond Version: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
+	s.lock.Lock()
+	out := fmt.Sprintf("Server Name: %s\nDiamond Version: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
 		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
 		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
 		s.Config.Name, version, s.level, s.Config.Debug,
@@ -100,7 +101,8 @@ func (s *Server) Status() string {
 		str,
 		s.Config.Level, time.Since(s.since), s.numconn,
 		s.allconn, os.Getenv("PWD"), exeinfo())
-
+	s.lock.Unlock()
+	return out
 }
 
 // Human readable
@@ -109,6 +111,14 @@ func listnstr(i int) string {
 		return "Listening"
 	}
 	return "Not Listening"
+}
+
+// CountConnections returns the total numbers of connections made to the diamond server
+func (s *Server) CountConnections() int64 {
+	s.lock.Lock()
+	num := s.allconn
+	s.lock.Unlock()
+	return num
 }
 
 // Print to log (from net/http)
@@ -152,19 +162,15 @@ func (s *Server) telcom() {
 			case 1:
 				s.ErrorLog.Printf("Shifting to runlevel 1")
 				s.runlevel1()
-				s.ErrorLog.Printf("Shifted to runlevel 1")
 
 			case 3:
 				s.ErrorLog.Printf("Shifting to runlevel 3")
 				s.runlevel3()
 				time.Sleep(300 * time.Millisecond)
-				s.ErrorLog.Printf("Shifted to runlevel 3")
-
 			case 4:
 				s.ErrorLog.Printf("Shifting to runlevel 4")
 				s.Runlevel4()
 				time.Sleep(300 * time.Millisecond)
-				s.ErrorLog.Printf("Shifted to runlevel 4")
 			default:
 				s.ErrorLog.Printf("BAD RUNLEVEL: %v", newlevel)
 			}
@@ -188,7 +194,7 @@ func (s *Server) telcom() {
 // 		if err != nil {
 // 			return err
 // 		}
-// 		fmt.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
+// 		s.ErrorLog.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
 // 	}
 // 	return nil
 // }

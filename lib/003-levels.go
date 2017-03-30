@@ -75,10 +75,10 @@ func (s *Server) runlevel3() {
 	// start listening on s.Config.Addr (config or -http flag)
 	l, err := net.Listen("tcp", s.Config.Addr)
 	if err != nil {
-		s.ErrorLog.Printf("** WARNING **: %s", err)
+		s.ErrorLog.Printf("** WARNING **: %s\n", err)
+		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
 		s.lock.Unlock()
 		return
-
 	}
 
 	// create a new stoppable net.Listener

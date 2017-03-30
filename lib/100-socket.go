@@ -19,6 +19,7 @@ func (s *Server) socketListen(path string) error {
 	var err error
 	s.listenerSocket, err = net.Listen("unix", path)
 	if err != nil {
+		s.ErrorLog.Println("wow", err)
 		return fmt.Errorf(
 			"diamond: Could not listen on unix domain socket %q: %v",
 			path, err,
@@ -85,10 +86,10 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 			*reply = e.Error()
 		}
 		p.parent.Config = conf
-		err := p.parent.ReloadConfig()
-		if err != nil {
-			*reply = err.Error()
-		}
+		// err := p.parent.ReloadConfig()
+		// if err != nil {
+		// 	*reply = err.Error()
+		// }
 		cur := p.parent.level
 		if cur != 1 {
 			p.parent.telinit <- 1 // close http listener
@@ -148,9 +149,21 @@ Okay:
 		s.Runlevel(0)
 		return
 	}
+	if s.Config.Debug {
+		s.ErrorLog.Println("SOCKET", s.Config.Socket)
+	}
 	addr, _ := net.ResolveUnixAddr("unix", s.Config.Socket)
 	r, e := net.DialUnix("unix", nil, addr)
 	if e != nil {
+		if strings.Contains(e.Error(), "no such") {
+			try++
+			if try > 2 {
+			s.ErrorLog.Println("FATAL", e)
+			s.Runlevel(0)
+			return
+			}
+		}
+
 		if !strings.Contains(e.Error(), "no such") {
 			try++
 			if try == 2 {
@@ -170,9 +183,9 @@ Okay:
 			return
 		}
 	} else {
-		if s.Config.Debug {
-			s.ErrorLog.Print("Socket exists:" + r.RemoteAddr().String())
-		}
+
+		s.ErrorLog.Print("Socket exists:" + r.RemoteAddr().String())
+
 		// There is a running Diamond instance.
 		if s.Config.Kicks { // We are kicking
 			out := s.Kick()
@@ -189,10 +202,10 @@ Okay:
 		s.ErrorLog.Println("There is already a running server with socket: " +
 			s.Config.Socket +
 			". If you want to replace it, use {\"Kick\": true} in Config.")
-		s.Runlevel(0)
 		return
 
 	}
+
 	e = s.socketListen(s.Config.Socket)
 	if e != nil {
 		s.ErrorLog.Println("eek:", e)

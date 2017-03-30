@@ -3,7 +3,6 @@ package diamond
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -44,7 +43,7 @@ func NewServer(mux ...http.Handler) *Server {
 	s.Config.Kickable = true
 	s.Config.Kicks = true
 	s.Config.Name = "Diamond ⋄ 3"
-	s.Config.Socket = os.TempDir() + "diamond.sock"
+	s.Config.Socket = os.TempDir() + "/diamond.sock"
 	s.Config.DoCycleTest = false
 	s.Config.Level = 3
 	return s
@@ -73,7 +72,8 @@ var (
 	CHMODFILE os.FileMode = 0640
 )
 
-func (s *Server) ReloadConfig() error {
+// ReloadConfig reads config from configpath, resaves it
+func (s *Server) ReloadAndSaveConfig() error {
 	// load config
 	config, e := readconf(s.configpath)
 	if e != nil {
@@ -82,24 +82,30 @@ func (s *Server) ReloadConfig() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, n, "bytes written to", s.configpath)
+		s.ErrorLog.Println(n, "bytes written to", s.configpath)
 	}
+
+	// swap configs
 	s.Config = config
+
+	// random socket
 	if s.Config.Socket == "" {
-		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.Socket-")
+		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.socket-")
 		if er != nil {
 			return er
 		}
 		os.Remove(tmpfile.Name())
 		s.Config.Socket = tmpfile.Name()
 	}
+
 	if s.Config.Name == "" {
 		s.Config.Name = "⋄ Diamond"
 	}
 
-	if s.Config.Level != 3 && s.Config.Level != 1 {
+	if s.Config.Level == 0 {
 		s.Config.Level = 1
 	}
+
 	return nil
 }
 
@@ -107,11 +113,6 @@ func (s *Server) ReloadConfig() error {
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() (err error) {
 	s.ErrorLog.Println("Diamond Construct ⋄", version, "Initialized")
-
-	err = s.ReloadConfig()
-	if err != nil {
-		return err
-	}
 	// Socket listen timeout
 	done := make(chan int, 1)
 	go admin(done, s) // listen on unix socket
@@ -119,12 +120,12 @@ func (s *Server) Start() (err error) {
 	case <-done:
 		// good
 	case <-time.After(3 * time.Second):
-		fmt.Fprintln(os.Stderr, "Timeout waiting for UNIX socket to be released")
+		s.ErrorLog.Println("timeout waiting for socket")
 		os.Exit(2)
 	}
 	go s.telcom() // launch event handler
 	if !s.socketed {
-		fmt.Fprintln(os.Stderr, "Could not socket")
+		s.ErrorLog.Println("could not socket")
 		os.Exit(2)
 	}
 
@@ -139,14 +140,14 @@ func (s *Server) Start() (err error) {
 		case 3, 4:
 			s.telinit <- 1 // go to single user mode first
 		default:
-			fmt.Fprintln(os.Stderr, "Bad Config: default 'Level' should be 1 or 3 or 4")
+			s.ErrorLog.Println("Bad Config: default 'Level' should be 1 or 3 or 4")
 			os.Exit(2)
 		}
 	}
 
 	// If JSON config: "DoCycleTest":1,
 	if s.Config.DoCycleTest {
-		fmt.Fprintln(os.Stderr, "Doing cycle test")
+		s.ErrorLog.Println("Doing cycle test")
 		cycleTest()
 	}
 
@@ -192,11 +193,11 @@ func (s *Server) ConfigPath(path string) error {
 // If server s is created, and then s.Config(b) is used before Start(), config.json is not read.
 // If s.Config(b) is not used, config.json or -config flag will be used.
 func (s *Server) Configure(b []byte) error {
-	config := new(ConfigFields)
-	err := json.Unmarshal(b, config)
+	var config ConfigFields
+	err := json.Unmarshal(b, &config)
 	if err != nil {
 		return err
 	}
-	return s.ReloadConfig()
-
+	s.Config = config
+	return nil
 }

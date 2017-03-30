@@ -5,16 +5,6 @@ import (
 	"os/exec"
 )
 
-func upgGitRemote(branch, repo string) (string, error) { // RPC: update
-	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "git", "remote", "add", branch, repo)
-	b, er := cmd.CombinedOutput()
-	if er != nil {
-		return string(b), er
-	}
-	return string(b), nil
-}
-
 func upgGitPull() (string, error) { // RPC: update
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, "git", "pull", "origin", "master")
@@ -33,6 +23,7 @@ func upgMake() (string, error) { // RPC: rebuild
 	}
 	return string(b), nil
 }
+
 func upgrade() (string, error) { // RPC: upgrade
 	s, e := upgGitPull()
 	if e != nil {

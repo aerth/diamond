@@ -25,7 +25,7 @@ type ConfigFields struct {
 	TLSKeyFile  string // TLS Key file location required for TLS
 }
 
-// Save config to file (JSON)
+// SaveConfig to file (JSON)
 func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
 	config := s.Config
 	b, err := json.MarshalIndent(config, " ", " ")
