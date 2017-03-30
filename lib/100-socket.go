@@ -116,7 +116,7 @@ func (s *Server) socketAccept() error {
 	conn, err := s.listenerSocket.Accept()
 	if err != nil {
 		if strings.Contains(err.Error(), "use of closed network connection") {
-			return fmt.Errorf("Not listening on UNIX socket.")
+			return fmt.Errorf("closed properly")
 		}
 
 		return fmt.Errorf("diamond: Could not accept connection: %v",
@@ -205,13 +205,7 @@ Okay:
 	for {
 		e = s.socketAccept()
 		if e != nil {
-			if strings.Contains(e.Error(),
-				"use of closed network connection") && s.level == 0 {
-				return
-			}
-			if s.Config.Debug {
-				s.ErrorLog.Printf("[socket] %s", e.Error())
-			}
+			s.ErrorLog.Printf("SOCKET %s", e.Error())
 			return
 		}
 		if s.Config.Debug {
