@@ -22,11 +22,11 @@ func main() {
 	router.GET("/hello/:name", Hello)
 
 	s := diamond.NewServer(router)
-	
+
 	s.ConfigPath("config.json")
 	s.Start()
 	select {
-	case quitmsg := <- s.Done:
+	case quitmsg := <-s.Done:
 		println(quitmsg)
 	}
 }

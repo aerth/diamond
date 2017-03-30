@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = "0.2" // Version 0.2
+	version = "0.3" // Version 0.3
 )
 
 // NewServer returns a new server, ready to be configured or started.
@@ -43,7 +43,7 @@ func NewServer(mux ...http.Handler) *Server {
 	s.Config.Addr = "127.0.0.1:8000"
 	s.Config.Kickable = true
 	s.Config.Kicks = true
-	s.Config.Name = "Diamond ⋄"
+	s.Config.Name = "Diamond ⋄ 3"
 	s.Config.Socket = os.TempDir() + "diamond.sock"
 	s.Config.DoCycleTest = false
 	s.Config.Level = 3
@@ -65,12 +65,12 @@ func (s *Server) SetConfigPath(path string) {
 	s.configpath = path
 }
 
-const (
+var (
 	// CHMODDIR default permissions for directory create
-	CHMODDIR = 0750
+	CHMODDIR os.FileMode = 0750
 
 	// CHMODFILE default permissions for file create
-	CHMODFILE = 0640
+	CHMODFILE os.FileMode = 0640
 )
 
 func (s *Server) ReloadConfig() error {

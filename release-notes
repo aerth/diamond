@@ -1,4 +1,50 @@
-diamond v0.1
+# diamond v0.3
+
+Report bugs/issues via github issues: https://github.com/aerth/diamond/issues
+
+## Big Changes:
+
+  * on boot, old socket will be deleted if it is thought to be orphaned
+
+  * server handling TERM signal, shutting down properly (runlevel 0, calling Hooks)
+
+
+## New Features:
+### Hook functions
+
+You can define custom 'hook' functions to be called when a runlevel is entered
+
+  * var diamond.Hooklevel0 func(){}
+  * var diamond.Hooklevel1 func(){}
+  * var diamond.Hooklevel3 func(){}
+
+Would ```func(ch chan interface{}) error {}``` offer safer hook functions?
+
+### diamond.DoneMessage and s.Quit chan
+
+  * DoneMessage will get sent to s.Quit chan string
+
+  * Define: 'diamond.DoneMessage' to customize message
+
+  * So an application can end with:
+
+```
+select {
+  case msg := <- s.Quit:
+    println(msg)
+    os.Exit(0) // may be omitted
+}
+```
+
+## Notes
+
+  * How to TLS with Diamond Server?
+  * Should rewrite now that Go http server has shutdown ability? Probably
+  * diamond-admin command still laggy after 2 commands, restart diamond-admin frequently as workaround
+
+------------------
+
+# diamond v0.1
 
 Breaking Changes:
 

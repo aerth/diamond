@@ -152,15 +152,15 @@ Okay:
 	r, e := net.DialUnix("unix", nil, addr)
 	if e != nil {
 		if !strings.Contains(e.Error(), "no such") {
-		try++
-		if try == 2 {
-			if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
-			 s.ErrorLog.Printf("%s", e)
-		 }
-			s.ErrorLog.Println("replacing stale socket")
-			os.Remove(s.Config.Socket)
-			goto Okay
-		}
+			try++
+			if try == 2 {
+				if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
+					s.ErrorLog.Printf("%s", e)
+				}
+				s.ErrorLog.Println("replacing stale socket")
+				os.Remove(s.Config.Socket)
+				goto Okay
+			}
 
 			s.ErrorLog.Printf("%s", e)
 			s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.Config.Socket)

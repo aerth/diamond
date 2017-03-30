@@ -20,7 +20,6 @@ type ConfigFields struct {
 	Kicks       bool   // will kick to launch
 	Kickable    bool   // able to be kicked
 	DoCycleTest bool   // do 1-3-default cycle at launch
-	Log         string // directory to write logs
 	TLSAddr     string // TLS Addr required for TLS
 	TLSCertFile string // TLS Certificate file location required for TLS
 	TLSKeyFile  string // TLS Key file location required for TLS
@@ -36,23 +35,23 @@ func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
 	if filenames == nil {
 		filenames = []string{s.configpath}
 	}
-for _, filename := range filenames {
-	var n1 int
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
-	if err != nil {
-		return n, err
+	for _, filename := range filenames {
+		var n1 int
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
+		if err != nil {
+			return n, err
+		}
+		if err = file.Truncate(0); err != nil {
+			return n, err
+		}
+		b = append(b, "\n"...)
+		n1, err = file.Write(b)
+		n += n1
+		if err != nil {
+			return n1, err
+		}
 	}
-	if err = file.Truncate(0); err != nil {
-		return n, err
-	}
-	b = append(b, "\n"...)
-	n1, err = file.Write(b)
-	n += n1
-	if err != nil {
-		return n1, err
-	}
-}
-return n, nil
+	return n, nil
 }
 
 func readconf(path string) (ConfigFields, error) {

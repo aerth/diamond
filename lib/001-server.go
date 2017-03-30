@@ -53,7 +53,7 @@ type Server struct {
 	Server           *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
 	socketed         bool         // true if we have started listening on a socket
 	signal           bool         // false if we should not telinit 0 when receive os signal
-	Done chan string
+	Done             chan string
 }
 
 // Level returns the current runlevel
@@ -136,11 +136,10 @@ func (s *Server) telcom() {
 			s.lock.Lock()
 			s.lock.Unlock()
 
-
 			switch newlevel {
 			case -1:
 				s.ErrorLog.Println("TELCOM down")
-			return
+				return
 			case 0:
 				s.ErrorLog.Printf("Shifting to runlevel 0")
 				s.runlevel0()
@@ -174,22 +173,22 @@ func (s *Server) telcom() {
 	}
 }
 
-// switch to log file if not stderr
-func (s *Server) dolog() error {
-	// empty logfile string is stderr
-	if s.Config.Log == "" {
-		s.Config.Log = stderr
-	}
-	// user didn't chose stderr
-	if s.Config.Log != stderr {
-		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, CHMODFILE)
-		if err == nil {
-			s.ErrorLog.SetOutput(f)
-		}
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
-	}
-	return nil
-}
+// // switch to log file if not stderr
+// func (s *Server) dolog() error {
+// 	// empty logfile string is stderr
+// 	if s.Config.Log == "" {
+// 		s.Config.Log = stderr
+// 	}
+// 	// user didn't chose stderr
+// 	if s.Config.Log != stderr {
+// 		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, CHMODFILE)
+// 		if err == nil {
+// 			s.ErrorLog.SetOutput(f)
+// 		}
+// 		if err != nil {
+// 			return err
+// 		}
+// 		fmt.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
+// 	}
+// 	return nil
+// }
