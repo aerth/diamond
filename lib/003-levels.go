@@ -12,6 +12,7 @@ import (
 // HookLevels are called at the end of each runlevel
 var (
 	HookLevel0 = func() {}
+	DoneMessage = "Reached target shutdown"
 	HookLevel1 = func() {}
 	HookLevel2 = func() {}
 	HookLevel3 = func() {}
@@ -32,6 +33,7 @@ func socketExists(path string) bool {
 func (s *Server) runlevel0() {
 	s.ErrorLog.Printf("Shifted to runlevel 0")
 	defer HookLevel0()
+	defer func(){s.Done <- DoneMessage}()
 	if s.listenerSocket == nil {
 		s.ErrorLog.Printf("Socket disappeared")
 		return
@@ -40,6 +42,7 @@ func (s *Server) runlevel0() {
 	if e != nil {
 		s.ErrorLog.Printf("%s", e)
 	}
+
 }
 
 // single user mode

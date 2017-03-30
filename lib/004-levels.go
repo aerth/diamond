@@ -1,14 +1,10 @@
 package diamond
 
-import "fmt"
-
-// Runlevel4 can be redefined
+// Runlevel4 can be redefined as well as HookLevel4
 func (s *Server) Runlevel4() {
 	demo := func() {
-		fmt.Println("Entering Custom Runlevel")
+		s.ErrorLog.Println("Entering Custom Runlevel")
 	}
-
 	demo()
-
 	HookLevel4()
 }

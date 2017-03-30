@@ -16,9 +16,9 @@ type Client struct {
 }
 
 // NewClient returns a new Client, to connect to the socket at path
-func NewClient(path string) *Client {
+func NewClient(socketpath string) *Client {
 	c := new(Client)
-	c.socket = path
+	c.socket = socketpath
 	addr, err := net.ResolveUnixAddr("unix", c.socket)
 	if err != nil {
 		fmt.Println(err)

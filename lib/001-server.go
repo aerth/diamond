@@ -53,6 +53,7 @@ type Server struct {
 	Server           *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
 	socketed         bool         // true if we have started listening on a socket
 	signal           bool         // false if we should not telinit 0 when receive os signal
+	Done chan string
 }
 
 // Level returns the current runlevel
@@ -143,6 +144,7 @@ func (s *Server) telcom() {
 			case 0:
 				s.ErrorLog.Printf("Shifting to runlevel 0")
 				s.runlevel0()
+
 				for {
 					time.Sleep(1 * time.Second)
 					s.ErrorLog.Print("Can't switch to runlevel 0")

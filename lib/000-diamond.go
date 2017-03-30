@@ -31,7 +31,7 @@ func NewServer(mux ...http.Handler) *Server {
 	} else {
 		s.mux = http.DefaultServeMux
 	}
-
+	s.Done = make(chan string, 1)
 	srv := &http.Server{Handler: s.mux}
 	srv.ReadTimeout = time.Duration(time.Second)
 	srv.ConnState = s.connState
