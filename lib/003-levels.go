@@ -1,11 +1,11 @@
 package diamond
 
 import (
+	"crypto/tls"
 	"net"
 	"os"
 	"strings"
 	"time"
-	"crypto/tls"
 )
 
 // HookLevels are called at the end of each runlevel
@@ -82,38 +82,28 @@ func (s *Server) runlevel3() {
 
 	s.listenerTCP = l
 
-
 	if s.Config.UseTLS {
-	// start listening on s.Config.TLSAddr (config or -http flag)
-	cer, err := tls.LoadX509KeyPair(s.Config.TLSCertFile, s.Config.TLSKeyFile)
-	if err != nil {
-		s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
-		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
-		s.lock.Unlock()
-		s.Runlevel(s.level)
-		return
-	}
-	config := &tls.Config{Certificates: []tls.Certificate{cer}}
-	tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
-	if err != nil {
-		s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
-		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
-		s.lock.Unlock()
-		s.Runlevel(s.level)
-		return
-	}
+		// start listening on s.Config.TLSAddr (config or -http flag)
+		cer, err := tls.LoadX509KeyPair(s.Config.TLSCertFile, s.Config.TLSKeyFile)
+		if err != nil {
+			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
+			s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
+			s.lock.Unlock()
+			s.Runlevel(s.level)
+			return
+		}
+		config := &tls.Config{Certificates: []tls.Certificate{cer}}
+		tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
+		if err != nil {
+			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
+			s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
+			s.lock.Unlock()
+			s.Runlevel(s.level)
+			return
+		}
 
-	// create a new stoppable net.Listener
-	// tlssl, err := stoplisten.New(tlsl)
-	// if err != nil {
-	// 	s.ErrorLog.Printf("Can't shift to runlevel 3: %s", err)
-	// 	s.lock.Unlock()
-	// 	s.Runlevel(s.level)
-	// 	return
-	// }
-
-	s.listenerTLS = tlsl
-}
+		s.listenerTLS = tlsl
+	}
 
 	//	s.handlerTCP = s.mux
 

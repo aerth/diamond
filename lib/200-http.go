@@ -3,9 +3,9 @@ package diamond
 import (
 	"net"
 	"net/http"
+	"strings"
 	"time"
-
-//	stoplisten "github.com/hydrogen18/stoppableListener"
+	//	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
 // Serve HTTP with one second read timeout (i wonder about large downloads)
@@ -32,12 +32,19 @@ func (s *Server) serveHTTP() {
 		return
 	}
 
-
 	var chosen []net.Listener
 	if !s.Config.NoHTTP {
-		s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
-		chosen = append(chosen, s.listenerTCP)
-
+		if s.Config.RedirectTLS && s.Config.UseTLS && s.listenerTLS != nil {
+			srv := &http.Server{Handler: http.HandlerFunc(s.redirector(s.Config.TLSAddr))}
+			srv.ReadTimeout = time.Duration(time.Second)
+			srv.ConnState = s.connState
+			srv.ErrorLog = s.ErrorLog
+			s.ErrorLog.Println("Redirecting", s.listenerTCP.Addr().String(), "to", s.listenerTLS.Addr().String())
+			go srv.Serve(s.listenerTCP)
+		} else {
+			s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
+			chosen = append(chosen, s.listenerTCP)
+		}
 	}
 
 	if s.Config.UseTLS {
@@ -49,100 +56,36 @@ func (s *Server) serveHTTP() {
 	s.lock.Unlock()
 
 	// serve loop in goroutine
- 	for _, listener := range chosen {
-				go func(listener net.Listener){
-					if listener == nil {
-						s.ErrorLog.Printf("Not listening (E1).")
-						return
-					}
+	for _, listener := range chosen {
+		go func(listener net.Listener) {
+			if listener == nil {
+				s.ErrorLog.Printf("Not listening (E1).")
+				return
+			}
 
-					name := listener.Addr().String()
-					e := s.Server.Serve(listener)
-					if e != nil {
-						s.ErrorLog.Printf("%s", e)
-					}
-					s.ErrorLog.Println("Listener stopped:", name)
-			}(listener)
+			name := listener.Addr().String()
+			e := s.Server.Serve(listener)
+			if e != nil {
+				s.ErrorLog.Printf("%s", e)
+			}
+			s.ErrorLog.Println("Listener stopped:", name)
+		}(listener)
 
-}
+	}
 
 	// done
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// // Serve HTTP with one second read timeout (i wonder about large downloads)
-// // It is only called by runlevel3 function while s.lock is Locked.
-// func (s *Server) serveHTTP() {
-// 	if s.listenerTCP == nil {
-// 		if s.Config.Debug {
-// 			s.ErrorLog.Printf("Not serving TCP, runlevel 3 is already dead")
-// 		}
-// 		s.lock.Unlock()
-// 		return
-// 	}
-//
-// 	if s.level != 3 {
-// 		s.ErrorLog.Print("Not serving TCP, not runlevel 3!")
-// 		s.lock.Unlock()
-// 		return
-// 	}
-//
-// 	if s.level != 3 {
-// 		if s.Config.Debug {
-// 			s.ErrorLog.Printf("Runlevel 3 already dead")
-//
-// 		}
-// 		s.lock.Unlock()
-// 		return
-// 	}
-//
-// 	if s.listenerTCP.TCPListener == nil {
-// 		s.lock.Unlock()
-// 		return
-// 	}
-//
-// 	if s.level != 3 {
-// 		s.ErrorLog.Print("Silly")
-// 		s.lock.Unlock()
-// 		return
-// 	}
-// 	if s.Config.Debug {
-// 		s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
-// 	}
-// 	go func(listen *stoplisten.StoppableListener) {
-// 		//<- time.After(100 * time.Millisecond)
-// 		if listen == nil {
-// 			s.ErrorLog.Printf("Not listening (E1).")
-// 			s.lock.Unlock()
-// 			return
-// 		}
-// 		if listen.TCPListener == nil {
-// 			s.ErrorLog.Printf("Not listening (E2).")
-// 			s.lock.Unlock()
-// 			return
-// 		}
-//
-// 		// unlock RIGHT BEFORE SERVING or a telinit 1 could mess this all up
-// 		s.lock.Unlock()
-// 		name := listen.Addr().String()
-// 		e := s.Server.Serve(listen)
-// 		if e != nil {
-// 			s.ErrorLog.Printf("%s", e)
-// 		}
-// 		s.ErrorLog.Println("Listener stopped:", name)
-// 	}(s.listenerTCP)
-//
-// }
+func (s *Server) redirector(destination string) func(w http.ResponseWriter, r *http.Request) {
+	if strings.Contains(destination, "443") {
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "https://"+s.Config.RedirectHost+r.URL.Path, 302)
+		}
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://"+s.Config.RedirectHost+destination+r.URL.Path, 302)
+	}
+}
 
 // ConnState closes idle connections, while counting  active connections
 // so they don't hang open while switching to runlevel 1

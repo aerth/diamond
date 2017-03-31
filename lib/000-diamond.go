@@ -36,11 +36,7 @@ func NewServer(mux ...http.Handler) *Server {
 		mux = []http.Handler{http.DefaultServeMux}
 	}
 	s.Done = make(chan string, 1)
-	srv := &http.Server{Handler: mux[0]}
-	srv.ReadTimeout = time.Duration(time.Second)
-	srv.ConnState = s.connState
-	srv.ErrorLog = s.ErrorLog
-	s.Server = srv
+	s.SetMux(mux[0])
 
 	// default config
 	s.Config = ConfigFields{}
