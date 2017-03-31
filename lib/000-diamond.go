@@ -3,16 +3,23 @@ package diamond
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	//	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+	//"path/filepath"
 	"time"
 )
 
 var (
-	version = "0.3" // Version 0.3
+	// Version 0.4
+	version = "0.4"
+
+	// CHMODDIR default permissions for directory create
+	CHMODDIR os.FileMode = 0750
+
+	// CHMODFILE default permissions for file create
+	CHMODFILE os.FileMode = 0640
 )
 
 // NewServer returns a new server, ready to be configured or started.
@@ -25,13 +32,11 @@ func NewServer(mux ...http.Handler) *Server {
 	s.telinit = make(chan int, 1)
 	s.ErrorLog = log.New(os.Stdout, "[⋄] ", log.Ltime)
 
-	if mux != nil {
-		s.mux = mux[0]
-	} else {
-		s.mux = http.DefaultServeMux
+	if mux == nil {
+		mux = []http.Handler{http.DefaultServeMux}
 	}
 	s.Done = make(chan string, 1)
-	srv := &http.Server{Handler: s.mux}
+	srv := &http.Server{Handler: mux[0]}
 	srv.ReadTimeout = time.Duration(time.Second)
 	srv.ConnState = s.connState
 	srv.ErrorLog = s.ErrorLog
@@ -42,7 +47,7 @@ func NewServer(mux ...http.Handler) *Server {
 	s.Config.Addr = "127.0.0.1:8000"
 	s.Config.Kickable = true
 	s.Config.Kicks = true
-	s.Config.Name = "Diamond ⋄ 3"
+	s.Config.Name = "Diamond ⋄ 4"
 	s.Config.Socket = os.TempDir() + "/diamond.sock"
 	s.Config.DoCycleTest = false
 	s.Config.Level = 3
@@ -51,8 +56,7 @@ func NewServer(mux ...http.Handler) *Server {
 
 // SetMux server
 func (s *Server) SetMux(mux http.Handler) {
-	s.mux = mux
-	srv := &http.Server{Handler: s.mux}
+	srv := &http.Server{Handler: mux}
 	srv.ReadTimeout = time.Duration(time.Second)
 	srv.ConnState = s.connState
 	srv.ErrorLog = s.ErrorLog
@@ -64,57 +68,13 @@ func (s *Server) SetConfigPath(path string) {
 	s.configpath = path
 }
 
-var (
-	// CHMODDIR default permissions for directory create
-	CHMODDIR os.FileMode = 0750
-
-	// CHMODFILE default permissions for file create
-	CHMODFILE os.FileMode = 0640
-)
-
-// ReloadConfig reads config from configpath, resaves it
-func (s *Server) ReloadAndSaveConfig() error {
-	// load config
-	config, e := readconf(s.configpath)
-	if e != nil {
-		os.MkdirAll(filepath.Dir(s.configpath), CHMODDIR)
-		n, err := s.SaveConfig(s.configpath)
-		if err != nil {
-			return err
-		}
-		s.ErrorLog.Println(n, "bytes written to", s.configpath)
-	}
-
-	// swap configs
-	s.Config = config
-
-	// random socket
-	if s.Config.Socket == "" {
-		tmpfile, er := ioutil.TempFile(os.TempDir(), "/diamond.socket-")
-		if er != nil {
-			return er
-		}
-		os.Remove(tmpfile.Name())
-		s.Config.Socket = tmpfile.Name()
-	}
-
-	if s.Config.Name == "" {
-		s.Config.Name = "⋄ Diamond"
-	}
-
-	if s.Config.Level == 0 {
-		s.Config.Level = 1
-	}
-
-	return nil
-}
-
 // Start the Diamond Construct. Should be done after Configuration.
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() (err error) {
 	s.ErrorLog.Println("Diamond Construct ⋄", version, "Initialized")
 	// Socket listen timeout
 	done := make(chan int, 1)
+
 	go admin(done, s) // listen on unix socket
 	select {
 	case <-done:
@@ -129,26 +89,29 @@ func (s *Server) Start() (err error) {
 		os.Exit(2)
 	}
 
-	cycleTest := func() {
+	/*
+	 * WARNING: No os.Exit() beyond this point
+	 * Use s.Runlevel(0)
+	 */
+
+	cycleTest := func() string {
 		s.ErrorLog.Printf("Cycle test")
 		switch s.Config.Level {
 		case 1:
-			if s.Config.Debug {
-				s.ErrorLog.Printf("Testing runlevel 3")
-			}
-			//	s.telinit <- 3 // test http port is available
 		case 3, 4:
 			s.telinit <- 1 // go to single user mode first
 		default:
-			s.ErrorLog.Println("Bad Config: default 'Level' should be 1 or 3 or 4")
-			os.Exit(2)
+			return "bad default level"
 		}
+		return ""
 	}
 
-	// If JSON config: "DoCycleTest":1,
 	if s.Config.DoCycleTest {
 		s.ErrorLog.Println("Doing cycle test")
-		cycleTest()
+		if got := cycleTest(); got != "gold" {
+			s.ErrorLog.Println(got)
+			s.Runlevel(0)
+		}
 	}
 
 	s.telinit <- s.Config.Level // go to default runlevel

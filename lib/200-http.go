@@ -8,11 +8,6 @@ import (
 	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
-// ServeStatus serves Status report
-func (s *Server) ServeStatus(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(s.Status()))
-}
-
 // Serve HTTP with one second read timeout (i wonder about large downloads)
 // It is only called by runlevel3 function while s.lock is Locked.
 func (s *Server) serveHTTP() {
@@ -53,7 +48,7 @@ func (s *Server) serveHTTP() {
 		s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
 	}
 	go func(listen *stoplisten.StoppableListener) {
-		//time.Sleep(100 * time.Millisecond)
+		//<- time.After(100 * time.Millisecond)
 		if listen == nil {
 			s.ErrorLog.Printf("Not listening (E1).")
 			s.lock.Unlock()
@@ -67,20 +62,17 @@ func (s *Server) serveHTTP() {
 
 		// unlock RIGHT BEFORE SERVING or a telinit 1 could mess this all up
 		s.lock.Unlock()
+		name := listen.Addr().String()
 		e := s.Server.Serve(listen)
 		if e != nil {
 			s.ErrorLog.Printf("%s", e)
-
-		} else {
-			s.ErrorLog.Printf("Not listening (E3).")
-
 		}
-
+		s.ErrorLog.Println("Listener stopped:", name)
 	}(s.listenerTCP)
 
 }
 
-// ConnState closes idle connections,
+// ConnState closes idle connections, while counting  active connections
 // so they don't hang open while switching to runlevel 1
 func (s *Server) connState(c net.Conn, state http.ConnState) {
 	s.counter.Lock()
@@ -93,7 +85,7 @@ func (s *Server) connState(c net.Conn, state http.ConnState) {
 		s.allconn++
 	case http.StateClosed:
 		go func() { // make the active connections counter a little less boring
-			time.Sleep(1 * time.Second)
+			<-time.After(5 * time.Second)
 			s.counter.Lock()
 			s.numconn--
 			s.counter.Unlock()
@@ -102,7 +94,14 @@ func (s *Server) connState(c net.Conn, state http.ConnState) {
 
 	case http.StateIdle:
 		c.Close() // dont wait around for stale clients to close a connection
+	case http.StateNew:
 	default:
+		s.ErrorLog.Println("Got new state:", state.String())
 	}
 	s.counter.Unlock()
+}
+
+// ServeStatus serves Status report
+func (s *Server) ServeStatus(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(s.Status()))
 }

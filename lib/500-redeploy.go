@@ -13,7 +13,7 @@ func (s *Server) respawn() {
 	spawn.Spawn()
 }
 
-// Another Diamond is occupying our socket. Let's kick it!
+// Kick ! Another Diamond is occupying our socket. Let's kick it!
 func (s *Server) Kick() string {
 	client := NewClient(s.Config.Socket)
 	r, e := client.Send("KICK")

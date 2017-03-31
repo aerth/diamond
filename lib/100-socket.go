@@ -80,7 +80,6 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		p.parent.telinit <- 0
 	case args == "reConfig":
 		*reply = "ReConfiguring ⋄"
-		p.parent.configured = false
 		conf, e := readconf(p.parent.configpath)
 		if e != nil {
 			*reply = e.Error()
@@ -142,7 +141,7 @@ func (s *Server) socketAccept() error {
 
 // Listen on s.Config.Socket for admin connections
 func admin(ch chan int, s *Server) {
-	var try int = 1
+	var try = 0
 Okay:
 	if s.Config.Socket == "" {
 		s.ErrorLog.Println("please specify where to create socket")
@@ -158,15 +157,15 @@ Okay:
 		if strings.Contains(e.Error(), "no such") {
 			try++
 			if try > 2 {
-			s.ErrorLog.Println("FATAL", e)
-			s.Runlevel(0)
-			return
+				s.ErrorLog.Println("FATAL", e)
+				s.Runlevel(0)
+				return
 			}
 		}
 
 		if !strings.Contains(e.Error(), "no such") {
 			try++
-			if try == 2 {
+			if try < 2 {
 				if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
 					s.ErrorLog.Printf("%s", e)
 				}
@@ -191,7 +190,7 @@ Okay:
 			out := s.Kick()
 			if out == "OKAY" || out == "unexpected EOF" {
 				s.ErrorLog.Print("Kicked a diamond")
-				time.Sleep(100 * time.Millisecond)
+				<-time.After(100 * time.Millisecond)
 				goto Okay
 			}
 			s.ErrorLog.Println("There is already a running server with socket: " +

@@ -23,37 +23,41 @@ const stderr = "stderr"
 // *  1 = single user mode (default) kills listenerTCP
 // *  3 = multiuser mode (public http) boots listenerTCP
 type Server struct {
+	Server   *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
+	ErrorLog *log.Logger  `json:"-"`
+	Config   ConfigFields
+	Done     chan string `json:"-"`
+
 	// boot time, used for uptime duration
 	since time.Time
 
 	// deadline, not implemented
 	until time.Time
 
-	// runlevel
-	level int
-
-	// Log out to where ever, default stderr
-	ErrorLog *log.Logger
+	// current runlevel
+	level   int
+	lock    sync.Mutex // guards only shifting between runlevels
+	telinit chan int   // accepts runlevel requests
 
 	// Socket listener that accepts admin commands
 	listenerSocket net.Listener
+	socketed       bool // true if we have started listening on a socket
 
 	// TCP Listener that can be stopped
 	listenerTCP *stoplisten.StoppableListener
-	listenlock  sync.Mutex
-	telinit     chan int     // accepts runlevel requests
-	lock        sync.Mutex   // guards only shifting between runlevels
-	Config      ConfigFields // parsed config
-	configpath  string       // path to config file
-	configured  bool         // has been configured
+	listenerTLS *stoplisten.StoppableListener
 
-	numconn, allconn int64        // count connections, used by s.Status()
-	counter          sync.Mutex   // guards only conn counter writes
-	mux              http.Handler // given by package main in with s.Start(mux http.Handler)
-	Server           *http.Server `json:"-"` // s.Server is created immediately before serving in runlevel 3
-	socketed         bool         // true if we have started listening on a socket
-	signal           bool         // false if we should not telinit 0 when receive os signal
-	Done             chan string
+	configpath string // path to config file
+
+	numconn, allconn int64      // count connections, used by s.Status()
+	counter          sync.Mutex // guards only conn counter writes within connection
+	//mux              http.Handler //
+
+	signal bool // handle signals like SIGTERM gracefully
+
+	// old
+	//listenlock  sync.Mutex
+	//configured  bool         // has been configured
 }
 
 // Level returns the current runlevel
@@ -155,7 +159,7 @@ func (s *Server) telcom() {
 				s.runlevel0()
 
 				for {
-					time.Sleep(1 * time.Second)
+					<-time.After(1 * time.Second)
 					s.ErrorLog.Print("Can't switch to runlevel 0")
 					fmt.Println("Can't switch to runlevel 0")
 				}
@@ -166,11 +170,11 @@ func (s *Server) telcom() {
 			case 3:
 				s.ErrorLog.Printf("Shifting to runlevel 3")
 				s.runlevel3()
-				time.Sleep(300 * time.Millisecond)
+				<-time.After(300 * time.Millisecond)
 			case 4:
 				s.ErrorLog.Printf("Shifting to runlevel 4")
 				s.Runlevel4()
-				time.Sleep(300 * time.Millisecond)
+				<-time.After(300 * time.Millisecond)
 			default:
 				s.ErrorLog.Printf("BAD RUNLEVEL: %v", newlevel)
 			}

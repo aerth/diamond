@@ -17,9 +17,13 @@ type ConfigFields struct {
 	Socket      string // path of Socket file to create (/tmp/diamond.sock)
 	Level       int
 	Debug       bool
-	Kicks       bool   // will kick to launch
-	Kickable    bool   // able to be kicked
-	DoCycleTest bool   // do 1-3-default cycle at launch
+	Kicks       bool // will kick to launch
+	Kickable    bool // able to be kicked
+	DoCycleTest bool // do 1-3-default cycle at launch
+
+	// ssl options
+	NoHTTP      bool   // dont listen on HTTP
+	UseTLS      bool   // also listen on TLS
 	TLSAddr     string // TLS Addr required for TLS
 	TLSCertFile string // TLS Certificate file location required for TLS
 	TLSKeyFile  string // TLS Key file location required for TLS

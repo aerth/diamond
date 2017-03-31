@@ -106,7 +106,7 @@ Start:
 				os.Exit(0)
 			}
 			if strings.Contains(resperr.Error(), "unexpected EOF") {
-				time.Sleep(200 * time.Millisecond)
+				<-time.After(200 * time.Millisecond)
 				mm.GetScreen().Fini()
 
 				goto Start
@@ -206,7 +206,7 @@ Start:
 					x++
 					clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
 					mm.GetScreen().Show()
-					time.Sleep(100 * time.Millisecond)
+					<-time.After(100 * time.Millisecond)
 
 					mm.GetScreen().Show()
 				case <-ch:
@@ -248,7 +248,7 @@ Start:
 		case cmd == "redeploy":
 			resp, resperr = client.Send(cmd)
 			if strings.Contains(resp, "Redeploying") {
-				time.Sleep(200 * time.Millisecond)
+				<-time.After(200 * time.Millisecond)
 				resp, resperr = client.Send(cmdStatus)
 
 			}

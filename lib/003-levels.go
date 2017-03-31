@@ -48,9 +48,9 @@ func (s *Server) runlevel0() {
 // single user mode
 func (s *Server) runlevel1() {
 	s.lock.Lock()
-	s.runlevel6() // stop listener
+	s.runlevel6() // stop listeners
 	s.level = 1
-	time.Sleep(1 * time.Second)
+	<-time.After(1 * time.Second)
 	HookLevel1()
 	s.lock.Unlock()
 
@@ -109,6 +109,7 @@ func (s *Server) runlevel3() {
 // should not be called by anything but other runlevel methods.
 
 func (s *Server) runlevel6() {
+	// s.lock is locked
 	s.level = 6
 
 	// disallow new multiuser connections
@@ -120,12 +121,25 @@ func (s *Server) runlevel6() {
 			panic(e)
 		}
 		s.listenerTCP.Stop()
-
 	}
 
 	if s.listenerTCP != nil {
 		s.listenerTCP.TCPListener = nil
 		s.listenerTCP = nil
+	}
+
+	if s.listenerTLS != nil {
+		s.ErrorLog.Printf("Closing TLS listener: %s", s.Config.TLSAddr)
+		e := s.listenerTLS.Close()
+		if e != nil {
+			panic(e)
+		}
+		s.listenerTLS.Stop()
+	}
+
+	if s.listenerTLS != nil {
+		s.listenerTLS.TCPListener = nil
+		s.listenerTLS = nil
 	}
 
 }

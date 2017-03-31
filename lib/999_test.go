@@ -101,7 +101,7 @@ package diamond
 // 			log.Println("Failed on test C round: ", i)
 // 			break
 // 		}
-// 		time.Sleep(time.Second)
+// 		<- time.After(time.Second)
 // 		log.Println("testShiftRunlevel1")
 // 		testShiftRunlevel1(t)
 //
@@ -109,7 +109,7 @@ package diamond
 // 			log.Println("Failed on test D round: ", i)
 // 			break
 // 		}
-// 		time.Sleep(time.Second)
+// 		<- time.After(time.Second)
 // 	}
 //
 // }
@@ -117,7 +117,7 @@ package diamond
 // func testHTTPRunLevel1(t *testing.T) {
 // 	if s.level != 1 {
 // 		s.telinit <- 1
-// 		time.Sleep(100 * time.Millisecond)
+// 		<- time.After(100 * time.Millisecond)
 // 	}
 //
 // 	assert.Equal(t, 1, s.level)
@@ -144,14 +144,14 @@ package diamond
 // }
 // func testShiftRunlevel3(t *testing.T) {
 // 	s.telinit <- 3
-// 	time.Sleep(1200 * time.Millisecond)
+// 	<- time.After(1200 * time.Millisecond)
 // 	assert.Equal(t, 3, s.level)
 //
 // }
 // func testHTTPRunLevel3(t *testing.T) {
 // 	if s.level != 3 {
 // 		s.telinit <- 3
-// 		time.Sleep(1200 * time.Millisecond)
+// 		<- time.After(1200 * time.Millisecond)
 // 	}
 // 	assert.Equal(t, 3, s.level)
 // 	bod := get(t, testhome+"/status")
@@ -165,23 +165,23 @@ package diamond
 //
 // 	log.Println("Switching to runlevel 1")
 // 	s.telinit <- 1
-// 	time.Sleep(300 * time.Millisecond)
+// 	<- time.After(300 * time.Millisecond)
 // 	log.Println("Switching to runlevel 3")
 // 	s.telinit <- 3
 //
-// 	time.Sleep(1 * time.Second)
+// 	<- time.After(1 * time.Second)
 // 	bod := get(nil, testhome+"/status")
 // 	assert.True(t, strings.Contains(string(bod), "Current Runlevel: 3"))
 // 	log.Println("Switching to runlevel 1")
 // 	s.telinit <- 1
-// 	time.Sleep(300 * time.Millisecond)
+// 	<- time.After(300 * time.Millisecond)
 // 	log.Println("Switching to runlevel 3")
 // 	s.telinit <- 3
-// 	time.Sleep(1 * time.Second)
+// 	<- time.After(1 * time.Second)
 // 	log.Println("Switching to runlevel 1")
 // 	s.telinit <- 1
 //
-// 	time.Sleep(300 * time.Millisecond)
+// 	<- time.After(300 * time.Millisecond)
 // 	assert.Equal(t, 1, s.level)
 //
 // 	resp, err := http.Get(testhome + "/status")
@@ -238,7 +238,7 @@ package diamond
 // 	fmt.Println("Closing Socket")
 // 	// telinit 0
 // 	s.telinit <- 0
-// 	time.Sleep(time.Second)
+// 	<- time.After(time.Second)
 // 	con, er = net.DialUnix("unix", nil, unix)
 // 	if er != nil {
 // 		log.Println("1", er)
@@ -312,7 +312,7 @@ package diamond
 //
 // 		assert.NotNil(t, e)
 // 		fmt.Println(e)
-// 		time.Sleep(time.Millisecond * 100)
+// 		<- time.After(time.Millisecond * 100)
 // 		// assert.Equal(t, "", config.Addr)
 // 		// assert.False(t, Config.Debug)
 // 		// assert.Equal(t, "", config.name)
