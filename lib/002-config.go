@@ -25,7 +25,10 @@ type ConfigFields struct {
 	NoHTTP      bool   // dont listen on HTTP
 	UseTLS      bool   // also listen on TLS
 	RedirectTLS bool   // open special handler on 80 that only redirects to 443
+<<<<<<< HEAD
 	RedirectHost string // which host to redirect to
+=======
+>>>>>>> a82680d6e2c1a7d63b6d0f1e4b87390c435eb33a
 	TLSAddr     string // TLS Addr required for TLS
 	TLSCertFile string // TLS Certificate file location required for TLS
 	TLSKeyFile  string // TLS Key file location required for TLS
