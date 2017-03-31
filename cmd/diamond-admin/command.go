@@ -190,31 +190,32 @@ Start:
 			}
 		}
 		tmp := make(chan int)
-		go func(ch chan int) {
-			mm.GetScreen().Clear()
-			clix.Type(mm.GetScreen(), 1, 1, 1, "This may take a while...")
-			mm.GetScreen().Show()
-			var x = 1
-			t1 := time.Now()
-			for {
-				select {
-				case <-time.After(100 * time.Millisecond):
-					if time.Now().Sub(t1) > time.Second*4 {
-						msg = "Timeout occured."
-						continue
-					}
-					x++
-					clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
-					mm.GetScreen().Show()
-					<-time.After(100 * time.Millisecond)
 
-					mm.GetScreen().Show()
-				case <-ch:
-					mm.Present(true)
-					return
+		mm.GetScreen().Clear()
+		clix.Type(mm.GetScreen(), 1, 1, 1, "This may take a while...")
+		mm.GetScreen().Show()
+		var x = 1
+		t1 := time.Now()
+	Waiting:
+		for {
+			select {
+			case <-time.After(100 * time.Millisecond):
+				if time.Now().Sub(t1) > time.Second*4 {
+					msg = "Timeout occured."
+					continue
 				}
+				x++
+				clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
+				mm.GetScreen().Show()
+				<-time.After(100 * time.Millisecond)
+
+				mm.GetScreen().Show()
+			case <-ch:
+				mm.Present(true)
+				break Waiting
 			}
-		}(tmp)
+		}
+
 		// do it
 		switch {
 		case cmd == "", cmd == "quit":
@@ -224,7 +225,7 @@ Start:
 			msg = "Are you sure? Please select OTHER and type: telinit 0" // to prevent accidental halt
 			continue
 		case cmd == "restart":
-			cmd = "telinit 6"
+			cmd = "redeploy"
 			fallthrough
 		case cmd == "stop":
 			cmd = "telinit 0"
