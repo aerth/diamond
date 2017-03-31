@@ -5,8 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	stoplisten "github.com/hydrogen18/stoppableListener"
+	"crypto/tls"
 )
 
 // HookLevels are called at the end of each runlevel
@@ -81,15 +80,40 @@ func (s *Server) runlevel3() {
 		return
 	}
 
-	// create a new stoppable net.Listener
-	sl, err := stoplisten.New(l)
+	s.listenerTCP = l
+
+
+	if s.Config.UseTLS {
+	// start listening on s.Config.TLSAddr (config or -http flag)
+	cer, err := tls.LoadX509KeyPair(s.Config.TLSCertFile, s.Config.TLSKeyFile)
 	if err != nil {
-		s.ErrorLog.Printf("Can't runlevel3: %s", err)
+		s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
+		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
 		s.lock.Unlock()
+		s.Runlevel(s.level)
+		return
+	}
+	config := &tls.Config{Certificates: []tls.Certificate{cer}}
+	tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
+	if err != nil {
+		s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
+		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
+		s.lock.Unlock()
+		s.Runlevel(s.level)
 		return
 	}
 
-	s.listenerTCP = sl
+	// create a new stoppable net.Listener
+	// tlssl, err := stoplisten.New(tlsl)
+	// if err != nil {
+	// 	s.ErrorLog.Printf("Can't shift to runlevel 3: %s", err)
+	// 	s.lock.Unlock()
+	// 	s.Runlevel(s.level)
+	// 	return
+	// }
+
+	s.listenerTLS = tlsl
+}
 
 	//	s.handlerTCP = s.mux
 
@@ -118,27 +142,29 @@ func (s *Server) runlevel6() {
 		s.ErrorLog.Printf("Closing TCP listener: %s", s.Config.Addr)
 		e := s.listenerTCP.Close()
 		if e != nil {
-			panic(e)
+			s.ErrorLog.Println(e)
 		}
-		s.listenerTCP.Stop()
 	}
 
 	if s.listenerTCP != nil {
-		s.listenerTCP.TCPListener = nil
 		s.listenerTCP = nil
+	}
+
+	if s.listenerTCP != nil {
+		s.ErrorLog.Println("Cant close TLS Listener:", s.listenerTCP.Addr().String())
+		s.listenerTLS = nil
 	}
 
 	if s.listenerTLS != nil {
 		s.ErrorLog.Printf("Closing TLS listener: %s", s.Config.TLSAddr)
 		e := s.listenerTLS.Close()
 		if e != nil {
-			panic(e)
+			s.ErrorLog.Println(e)
 		}
-		s.listenerTLS.Stop()
 	}
 
 	if s.listenerTLS != nil {
-		s.listenerTLS.TCPListener = nil
+		s.ErrorLog.Println("Cant close TLS Listener:", s.listenerTLS.Addr().String())
 		s.listenerTLS = nil
 	}
 

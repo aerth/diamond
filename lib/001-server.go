@@ -1,3 +1,5 @@
+// +build go1.8
+
 package diamond
 
 // Server runs
@@ -12,8 +14,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
 const stderr = "stderr"
@@ -44,8 +44,8 @@ type Server struct {
 	socketed       bool // true if we have started listening on a socket
 
 	// TCP Listener that can be stopped
-	listenerTCP *stoplisten.StoppableListener
-	listenerTLS *stoplisten.StoppableListener
+	listenerTCP net.Listener
+	listenerTLS net.Listener
 
 	configpath string // path to config file
 
