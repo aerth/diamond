@@ -37,11 +37,7 @@ func (s *Server) serveHTTP() {
 	var chosen []net.Listener
 	if !s.Config.NoHTTP {
 		if s.Config.RedirectTLS && s.Config.UseTLS && s.listenerTLS != nil {
-<<<<<<< HEAD
 			srv := &http.Server{Handler: http.HandlerFunc(s.redirector(s.Config.TLSAddr))}
-=======
-			srv := &http.Server{Handler: http.HandlerFunc(redirector(s.Config.TLSAddr))}
->>>>>>> a82680d6e2c1a7d63b6d0f1e4b87390c435eb33a
 			srv.ReadTimeout = time.Duration(time.Second)
 			srv.ConnState = s.connState
 			srv.ErrorLog = s.ErrorLog
@@ -82,7 +78,6 @@ func (s *Server) serveHTTP() {
 	// done
 }
 
-<<<<<<< HEAD
 func (s *Server) redirector(destination string) func(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(destination, "443") {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -91,16 +86,6 @@ func (s *Server) redirector(destination string) func(w http.ResponseWriter, r *h
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://"+s.Config.RedirectHost+destination+r.URL.Path, 302)
-=======
-func redirector(destination string) func(w http.ResponseWriter, r *http.Request) {
-	if strings.Contains(destination, "443") {
-		return func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "https://"+RedirectHost+r.URL.Path, 302)
-		}
-	}
-	return func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "https://"+RedirectHost+destination+r.URL.Path, 302)
->>>>>>> a82680d6e2c1a7d63b6d0f1e4b87390c435eb33a
 	}
 }
 
