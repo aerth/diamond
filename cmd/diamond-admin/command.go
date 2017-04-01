@@ -3,7 +3,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,13 +14,18 @@ import (
 )
 
 var (
-	sock        = flag.String("s", "/tmp/diamond.socket", "path to socket")
+	sock        = flag.String("s", "", "path to socket")
 	refreshtime = flag.Duration("r", time.Minute*30, "refresh status duration")
 )
 
 const (
-	// cmdStatus is the RPC command "status"
 	cmdStatus = "status"
+)
+
+var (
+	msg, resp  string // to display in the Entry screen
+	resperr    error
+	socketpath string //
 )
 
 func init() {
@@ -29,10 +33,18 @@ func init() {
 }
 func main() {
 	flag.Parse()
+	if *sock == "" && socketpath == "" {
+		flag.Usage()
+		println("Need socket flag (diamond-admin -s /path/to/socket)")
+		os.Exit(2)
+	}
+	if *sock != "" {
+		socketpath = *sock
+	}
 	try := 0
 Start:
 	try++
-	client := diamond.NewClient(*sock)
+	client := diamond.NewClient(socketpath)
 	client.Name = "ADMIN"
 	r, e := client.Send("HELLO from " + client.Name)
 	if e != nil {
@@ -40,20 +52,19 @@ Start:
 			notrunning()
 			os.Exit(2)
 		} else {
-			fmt.Println(e)
+			println(e.Error())
 			notrunning()
+			os.Exit(2)
 		}
 
 	}
+
 	if !strings.HasPrefix(r, "HELLO from ") {
-		log.Println("Can't connect to socket")
+		println("Can't connect to socket")
 		os.Exit(2)
 	}
+
 	client.Server = strings.TrimPrefix(r, "HELLO from ")
-	var (
-		msg, resp string // to display in the Entry screen
-		resperr   error
-	)
 	args := strings.Join(flag.Args(), " ")
 	if args != "" {
 
@@ -61,13 +72,13 @@ Start:
 			flag.Usage()
 			os.Exit(2)
 		}
-		fmt.Println("Command:", args)
+		println("Command:", args)
 		rp, rerr := client.Send(args)
 		if rp != "" {
-			fmt.Println(rp)
+			println(rp)
 		}
 		if rerr != nil {
-			fmt.Println(rerr)
+			println(rerr)
 		}
 
 		os.Exit(0)
@@ -85,9 +96,9 @@ Start:
 		}
 		if msg == "" {
 			if try != 1 {
-				msg = fmt.Sprintf("Reconnected to: %q", client.Server)
+				msg = "Reconnected to: " + client.Server
 			} else {
-				msg = fmt.Sprintf("Connected to: %q", client.Server)
+				msg = "Connected to: " + client.Server
 			}
 		}
 
@@ -102,7 +113,7 @@ Start:
 		if resperr != nil {
 			if strings.Contains(resperr.Error(), "no such file or directory") {
 				mm.GetScreen().Fini()
-				fmt.Println("Server is down.")
+				println("Server is down.")
 				os.Exit(0)
 			}
 			if strings.Contains(resperr.Error(), "unexpected EOF") {
@@ -138,21 +149,11 @@ Start:
 		var cmd string
 
 		select {
-		//case <-ev.Input:
-
-		//mm.GetScreen().Show()
-		// Reset timeout
-
-		case <-time.After(*refreshtime):
+				case <-time.After(*refreshtime):
 
 			cmd = cmdStatus
-			// clix.Eat(mm.GetScreen(), 2)
-			// clix.UnEat(mm.GetScreen(), 2)
-			// clix.TypeWriter(mm.GetScreen(), 1, 1, 0, "Goodbye!")
-			// mm.GetScreen().Fini()
-			// os.Exit(0)
 
-		// sanitize menu input
+
 		case c := <-ev.Output:
 			mm.GetScreen().Show()
 			switch c.(string) {
@@ -190,31 +191,34 @@ Start:
 			}
 		}
 		tmp := make(chan int)
-
 		mm.GetScreen().Clear()
 		clix.Type(mm.GetScreen(), 1, 1, 1, "This may take a while...")
 		mm.GetScreen().Show()
 		var x = 1
 		t1 := time.Now()
-	Waiting:
-		for {
-			select {
-			case <-time.After(100 * time.Millisecond):
-				if time.Now().Sub(t1) > time.Second*4 {
-					msg = "Timeout occured."
-					continue
-				}
-				x++
-				clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
-				mm.GetScreen().Show()
-				<-time.After(100 * time.Millisecond)
 
-				mm.GetScreen().Show()
-			case <-ch:
-				mm.Present(true)
-				break Waiting
+		go func() {
+			Waiting:
+			for {
+				select {
+				case <-time.After(100 * time.Millisecond):
+					if time.Now().Sub(t1) > time.Second*4 {
+						msg = "Timeout occured."
+						continue
+					}
+					x++
+					clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
+					mm.GetScreen().Show()
+					<-time.After(100 * time.Millisecond)
+					mm.GetScreen().Show()
+				case <-tmp:
+					mm.GetScreen().Clear()
+					mm.Present(true)
+					break Waiting
+				}
 			}
-		}
+			return
+		}()
 
 		// do it
 		switch {
@@ -231,16 +235,16 @@ Start:
 			cmd = "telinit 0"
 			fallthrough
 		case strings.HasPrefix(cmd, "telinit"):
-			msg = fmt.Sprint("Runlevel:", cmd)
+			msg = "Runlevel: " + cmd
 			resp, resperr = client.Send(cmd)
 			if resp == "DONE" {
 				resp, resperr = client.Send(cmdStatus)
 			}
 		case strings.HasPrefix(cmd, "load"):
-			msg = fmt.Sprint("Load:", cmd)
+			msg = "Load: " + cmd
 			resp, resperr = client.Send(cmd)
 		case strings.HasPrefix(cmd, "import"):
-			msg = fmt.Sprint("Import:", cmd)
+			msg = "Import: " + cmd
 			resp, resperr = client.Send(cmd)
 
 		case cmd == "backup", cmd == "upgrade", cmd == "rebuild", cmd == cmdStatus:
@@ -251,20 +255,18 @@ Start:
 			if strings.Contains(resp, "Redeploying") {
 				<-time.After(200 * time.Millisecond)
 				resp, resperr = client.Send(cmdStatus)
-
 			}
 		// not a known command, lets try RPC anyways
 		default:
-			msg = "Trying it"
+			msg = "Trying new command: " + cmd
 			resp, resperr = client.Send(cmd)
-			//msg = "Command not found."
 		}
-		close(tmp)
+		tmp <- 1
 
 	}
 }
 
 func notrunning() {
-	fmt.Println("Server might not be running. Fix that first.")
+	println("Server might not be running. Fix that first.")
 	os.Exit(2)
 }
