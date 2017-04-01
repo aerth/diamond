@@ -149,10 +149,9 @@ Start:
 		var cmd string
 
 		select {
-				case <-time.After(*refreshtime):
+		case <-time.After(*refreshtime):
 
 			cmd = cmdStatus
-
 
 		case c := <-ev.Output:
 			mm.GetScreen().Show()
@@ -198,7 +197,7 @@ Start:
 		t1 := time.Now()
 
 		go func() {
-			Waiting:
+		Waiting:
 			for {
 				select {
 				case <-time.After(100 * time.Millisecond):

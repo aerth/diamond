@@ -30,6 +30,7 @@ var (
 		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 	}
 )
+
 func socketExists(path string) bool {
 	_, e := os.Open(path)
 	if e != nil {
@@ -105,23 +106,22 @@ func (s *Server) runlevel3() {
 			return
 		}
 
-
 		config := &tls.Config{
-			Certificates: []tls.Certificate{cer},
-			CipherSuites: preferredCipherSuites,
+			Certificates:             []tls.Certificate{cer},
+			CipherSuites:             preferredCipherSuites,
 			PreferServerCipherSuites: true,
-	}
-
-	config.BuildNameToCertificate()
-	for i := range config.NameToCertificate {
-		_, err = url.Parse(i)
-		if err == nil {
-			s.Config.RedirectHost = i
 		}
-	}
 
-	s.ErrorLog.Printf("Found %v TLS Certificates: %q\n", len(config.NameToCertificate), s.Config.RedirectHost)
-	
+		config.BuildNameToCertificate()
+		for i := range config.NameToCertificate {
+			_, err = url.Parse(i)
+			if err == nil {
+				s.Config.RedirectHost = i
+			}
+		}
+
+		s.ErrorLog.Printf("Found %v TLS Certificates: %q\n", len(config.NameToCertificate), s.Config.RedirectHost)
+
 		tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
 		if err != nil {
 			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
