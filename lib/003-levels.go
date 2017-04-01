@@ -17,7 +17,22 @@ var (
 	HookLevel3  = func() {}
 	HookLevel4  = func() {}
 )
-
+var (
+	// The ECDHE cipher suites are preferred for performance and forward
+	// secrecy.  See https://community.qualys.com/blogs/securitylabs/2013/06/25/ssl-labs-deploying-forward-secrecy.
+	preferredCipherSuites = []uint16{
+		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+		tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+		tls.TLS_RSA_WITH_RC4_128_SHA,
+		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+		tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	}
+)
 func socketExists(path string) bool {
 	_, e := os.Open(path)
 	if e != nil {
@@ -92,7 +107,11 @@ func (s *Server) runlevel3() {
 			s.Runlevel(s.level)
 			return
 		}
-		config := &tls.Config{Certificates: []tls.Certificate{cer}}
+		config := &tls.Config{
+			Certificates: []tls.Certificate{cer},
+			CipherSuites: preferredCipherSuites,
+			PreferServerCipherSuites: true,
+	}
 		tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
 		if err != nil {
 			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)

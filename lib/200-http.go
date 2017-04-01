@@ -8,6 +8,7 @@ import (
 	//	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
+// Where to redirect insecure visitors, for example whatever.com:80 -> https://RedirectHost:TLSAddr
 var RedirectHost = "localhost"
 
 // Serve HTTP with one second read timeout (i wonder about large downloads)
