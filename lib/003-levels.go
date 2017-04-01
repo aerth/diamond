@@ -3,6 +3,7 @@ package diamond
 import (
 	"crypto/tls"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -24,14 +25,11 @@ var (
 		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 		tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 	}
 )
-
 func socketExists(path string) bool {
 	_, e := os.Open(path)
 	if e != nil {
@@ -106,11 +104,24 @@ func (s *Server) runlevel3() {
 			s.Runlevel(s.level)
 			return
 		}
+
+
 		config := &tls.Config{
 			Certificates: []tls.Certificate{cer},
 			CipherSuites: preferredCipherSuites,
 			PreferServerCipherSuites: true,
 	}
+
+	config.BuildNameToCertificate()
+	for i := range config.NameToCertificate {
+		_, err = url.Parse(i)
+		if err == nil {
+			s.Config.RedirectHost = i
+		}
+	}
+
+	s.ErrorLog.Printf("Found %v TLS Certificates: %q\n", len(config.NameToCertificate), s.Config.RedirectHost)
+	
 		tlsl, err := tls.Listen("tcp", s.Config.TLSAddr, config)
 		if err != nil {
 			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
