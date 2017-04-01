@@ -71,17 +71,12 @@ func (s *Server) signalcatch() {
 	}
 	quitchan := make(chan os.Signal, 1)
 	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
-
-	go func() {
-		select {
-		case sig := <-quitchan:
-			println("Diamond got signal:", sig.String()) // stderr
-			s.ErrorLog.Println("Diamond got signal:", sig.String())
-			s.Runlevel(0)
-		}
-
-	}()
-
+	select {
+	case sig := <-quitchan:
+		println("Diamond got signal:", sig.String()) // stderr
+		s.ErrorLog.Println("Diamond got signal:", sig.String())
+		s.Runlevel(0)
+	}
 }
 
 // LevelString returns the current runlevel as a string
