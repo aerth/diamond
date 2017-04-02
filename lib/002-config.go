@@ -3,11 +3,8 @@ package diamond
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
-	"strings"
 )
 
 // ConfigFields fields
@@ -32,7 +29,7 @@ type ConfigFields struct {
 	TLSKeyFile   string // TLS Key file location required for TLS
 }
 
-// SaveConfig to file (JSON)
+// SaveConfig to file(s) (JSON)
 func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
 	config := s.Config
 	b, err := json.MarshalIndent(config, " ", " ")
@@ -44,7 +41,7 @@ func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
 	}
 	for _, filename := range filenames {
 		var n1 int
-		file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, CHMODFILE)
 		if err != nil {
 			return n, err
 		}
@@ -64,10 +61,6 @@ func (s *Server) SaveConfig(filenames ...string) (n int, err error) {
 func readconf(path string) (ConfigFields, error) {
 	b, e := ioutil.ReadFile(path)
 	if e != nil {
-		if !strings.Contains(e.Error(), "no such") {
-			fmt.Println("⋄ config error", e)
-			return ConfigFields{}, nil // return no error, no config
-		}
 		return ConfigFields{}, e
 	}
 	if b == nil {
@@ -78,35 +71,24 @@ func readconf(path string) (ConfigFields, error) {
 	return config, err
 }
 
-func parseconf(c ConfigFields) error {
-	var e1, e2 error
-	// Check valid ADDR
-	if c.Addr != "" {
-		_, e1 = net.ResolveTCPAddr("tcp", c.Addr)
+// ConfigPath reads a config file
+func (s *Server) ConfigPath(path string) error {
+	conf, e := readconf(path)
+	if e != nil {
+		return e
 	}
+	s.Config = conf
+	s.configpath = path
+	return nil
+}
 
-	// Check valid FILENAME
-	if c.Socket != "" {
-		_, e2 = os.Open(c.Socket)
-
-		if e2 != nil {
-			if strings.Contains(e2.Error(), "no such") {
-				e2 = nil
-			}
-
-		}
+// Configure a server using json []byte
+func (s *Server) Configure(b []byte) error {
+	var config ConfigFields
+	err := json.Unmarshal(b, &config)
+	if err != nil {
+		return err
 	}
-	if c.Level != 3 && c.Level != 1 {
-		if e1 != nil {
-			e1 = errors.New(e1.Error() + " AND incorrect default runLevel")
-		}
-	}
-	if e1 != nil && e2 != nil {
-		return errors.New(e1.Error() + " AND " + e2.Error())
-	}
-	if e2 != nil {
-		fmt.Println("returning e2")
-		return e2
-	}
-	return e1
+	s.Config = config
+	return nil
 }

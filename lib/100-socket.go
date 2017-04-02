@@ -13,7 +13,7 @@ import (
 // socketListen sets the Server's listenerSocket or returns an error
 func (s *Server) socketListen(path string) error {
 	//os.Remove(path)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), CHMODDIR); err != nil {
 		return fmt.Errorf("diamond: Could not create service path")
 	}
 	var err error
@@ -25,6 +25,11 @@ func (s *Server) socketListen(path string) error {
 			path, err,
 		)
 	}
+	err = os.Chmod(path, CHMODFILE)
+	if err != nil {
+		s.ErrorLog.Println(err)
+	}
+
 	return nil
 }
 

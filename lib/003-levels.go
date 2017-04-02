@@ -59,24 +59,22 @@ func (s *Server) runlevel0() {
 
 // single user mode
 func (s *Server) runlevel1() {
-	s.lock.Lock()
+	s.levellock.Lock()
 	s.runlevel6() // stop listeners
 	s.level = 1
 	<-time.After(1 * time.Second)
 	HookLevel1()
-	s.lock.Unlock()
+	s.levellock.Unlock()
 
 }
 
 // multiuser mode
 func (s *Server) runlevel3() {
 	if s.level == 3 {
-		if s.Config.Debug {
-			s.ErrorLog.Printf("Already in runlevel 3, switch to runlevel 1 first.")
-		}
+		s.ErrorLog.Printf("Already in runlevel 3, switch to runlevel 1 first.")
 		return
 	}
-	s.lock.Lock()
+	s.levellock.Lock()
 
 	// not using defer unlock because httpserver will unlock properly.
 
@@ -89,7 +87,7 @@ func (s *Server) runlevel3() {
 	if err != nil {
 		s.ErrorLog.Printf("** WARNING **: %s\n", err)
 		s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
-		s.lock.Unlock()
+		s.levellock.Unlock()
 		return
 	}
 
@@ -101,7 +99,7 @@ func (s *Server) runlevel3() {
 		if err != nil {
 			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
 			s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
-			s.lock.Unlock()
+			s.levellock.Unlock()
 			s.Runlevel(s.level)
 			return
 		}
@@ -126,7 +124,7 @@ func (s *Server) runlevel3() {
 		if err != nil {
 			s.ErrorLog.Printf("** TLS WARNING **: %s\n", err)
 			s.ErrorLog.Printf("Reverting to runlevel: %v\n", s.level)
-			s.lock.Unlock()
+			s.levellock.Unlock()
 			s.Runlevel(s.level)
 			return
 		}
@@ -152,7 +150,7 @@ func (s *Server) runlevel3() {
 // should not be called by anything but other runlevel methods.
 
 func (s *Server) runlevel6() {
-	// s.lock is locked
+	// s.levellock is locked
 	s.level = 6
 
 	// disallow new multiuser connections

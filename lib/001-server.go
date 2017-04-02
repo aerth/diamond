@@ -35,9 +35,9 @@ type Server struct {
 	until time.Time
 
 	// current runlevel
-	level   int
-	lock    sync.Mutex // guards only shifting between runlevels
-	telinit chan int   // accepts runlevel requests
+	level     int
+	levellock sync.Mutex // guards only shifting between runlevels
+	telinit   chan int   // accepts runlevel requests
 
 	// Socket listener that accepts admin commands
 	listenerSocket net.Listener
@@ -49,8 +49,9 @@ type Server struct {
 
 	configpath string // path to config file
 
-	numconn, allconn int64      // count connections, used by s.Status()
-	counter          sync.Mutex // guards only conn counter writes within connection
+	//numconn, allconn int64      // count connections, used by s.Status()
+	//counter          sync.Mutex // guards only conn counter writes within connection
+	counters mucount
 	//mux              http.Handler //
 
 	signal bool // handle signals like SIGTERM gracefully
@@ -60,9 +61,38 @@ type Server struct {
 	//configured  bool         // has been configured
 }
 
-// Level returns the current runlevel
-func (s *Server) Level() int {
-	return s.level
+type mucount struct {
+	m  map[string]uint64
+	mu sync.Mutex // guards map
+}
+
+func (m *mucount) Up(t ...string) (current uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, i := range t {
+		m.m[i]++
+		current = m.m[i]
+	}
+	return
+}
+
+func (m *mucount) Down(t ...string) (current uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, i := range t {
+		if m.m[i] >= 1 {
+			m.m[i]--
+		}
+		current = m.m[i]
+	}
+	return
+}
+
+func (m *mucount) Uint64(t string) (current uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	current = m.m[t]
+	return
 }
 
 func (s *Server) signalcatch() {
@@ -84,13 +114,18 @@ func (s *Server) LevelString() string {
 	return strconv.Itoa(s.level)
 }
 
+// Level returns the current runlevel
+func (s *Server) Level() int {
+	return s.level
+}
+
 // Status returns a status report string
 func (s *Server) Status() string {
 	if s == nil {
 		return ""
 	}
 	str := listnstr(s.level)
-	s.lock.Lock()
+	s.levellock.Lock()
 	out := fmt.Sprintf("Server Name: %s\nDiamond Version: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
 		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
 		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
@@ -98,10 +133,25 @@ func (s *Server) Status() string {
 		s.Config.Socket,
 		s.Config.Addr,
 		str,
-		s.Config.Level, time.Since(s.since), s.numconn,
-		s.allconn, os.Getenv("PWD"), exeinfo())
-	s.lock.Unlock()
+		s.Config.Level, time.Since(s.since), s.counters.Uint64("active"),
+		s.counters.Uint64("total"), os.Getenv("PWD"), exeinfo())
+	s.levellock.Unlock()
 	return out
+}
+
+// Uptime returns duration since boot
+func (s *Server) Uptime() time.Duration {
+	return time.Now().Sub(s.since)
+}
+
+// CountConnectionsActive returns the current active numbers of connections made to the diamond server
+func (s *Server) CountConnectionsActive() uint64 {
+	return s.counters.Uint64("active")
+}
+
+// CountConnectionsTotal returns the total numbers of connections made to the diamond server
+func (s *Server) CountConnectionsTotal() uint64 {
+	return s.counters.Uint64("total")
 }
 
 // Human readable
@@ -110,14 +160,6 @@ func listnstr(i int) string {
 		return "Listening"
 	}
 	return "Not Listening"
-}
-
-// CountConnections returns the total numbers of connections made to the diamond server
-func (s *Server) CountConnections() int64 {
-	s.lock.Lock()
-	num := s.allconn
-	s.lock.Unlock()
-	return num
 }
 
 // Print to log (from net/http)
@@ -142,8 +184,8 @@ func (s *Server) telcom() {
 		select {
 
 		case newlevel := <-s.telinit:
-			s.lock.Lock()
-			s.lock.Unlock()
+			s.levellock.Lock()
+			s.levellock.Unlock()
 
 			switch newlevel {
 			case -1:
@@ -177,23 +219,3 @@ func (s *Server) telcom() {
 		}
 	}
 }
-
-// // switch to log file if not stderr
-// func (s *Server) dolog() error {
-// 	// empty logfile string is stderr
-// 	if s.Config.Log == "" {
-// 		s.Config.Log = stderr
-// 	}
-// 	// user didn't chose stderr
-// 	if s.Config.Log != stderr {
-// 		f, err := os.OpenFile(s.Config.Log, os.O_APPEND|os.O_RDWR|os.O_CREATE, CHMODFILE)
-// 		if err == nil {
-// 			s.ErrorLog.SetOutput(f)
-// 		}
-// 		if err != nil {
-// 			return err
-// 		}
-// 		s.ErrorLog.Fprintln(os.Stderr, "Diamond log:", s.Config.Log)
-// 	}
-// 	return nil
-// }

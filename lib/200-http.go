@@ -8,30 +8,27 @@ import (
 	//	stoplisten "github.com/hydrogen18/stoppableListener"
 )
 
-// Where to redirect insecure visitors, for example whatever.com:80 -> https://RedirectHost:TLSAddr
-var RedirectHost = "localhost"
-
 // Serve HTTP with one second read timeout (i wonder about large downloads)
 // It is only called by runlevel3 function while s.lock is Locked.
 func (s *Server) serveHTTP() {
 	// handle switched runlevel (?)
 	if s.level != 3 {
 		s.ErrorLog.Print("Not serving HTTP, not runlevel 3!")
-		s.lock.Unlock()
+		s.levellock.Unlock()
 		return
 	}
 
 	// handle dead listener
 	if !s.Config.NoHTTP && s.listenerTCP == nil {
 		s.ErrorLog.Printf("Not serving HTTP, runlevel 3 is already dead (E2)")
-		s.lock.Unlock()
+		s.levellock.Unlock()
 		return
 	}
 
 	// handle dead tls listener
 	if s.Config.UseTLS && s.listenerTLS == nil {
 		s.ErrorLog.Printf("Not serving HTTPS, runlevel 3 is already dead (E2)")
-		s.lock.Unlock()
+		s.levellock.Unlock()
 		return
 	}
 
@@ -56,7 +53,7 @@ func (s *Server) serveHTTP() {
 
 	}
 
-	s.lock.Unlock()
+	s.levellock.Unlock()
 
 	// serve loop in goroutine
 	for _, listener := range chosen {
@@ -93,20 +90,13 @@ func (s *Server) redirector(destination string) func(w http.ResponseWriter, r *h
 // ConnState closes idle connections, while counting  active connections
 // so they don't hang open while switching to runlevel 1
 func (s *Server) connState(c net.Conn, state http.ConnState) {
-	s.counter.Lock()
-	if s.numconn < 0 {
-		s.numconn = 0
-	}
 	switch state {
 	case http.StateActive: // increment counters
-		s.numconn++
-		s.allconn++
+		go s.counters.Up("total", "active")
 	case http.StateClosed:
 		go func() { // make the active connections counter a little less boring
 			<-time.After(5 * time.Second)
-			s.counter.Lock()
-			s.numconn--
-			s.counter.Unlock()
+			s.counters.Down("active")
 		}()
 		c.Close() // dont wait around to close a connection
 
@@ -116,7 +106,6 @@ func (s *Server) connState(c net.Conn, state http.ConnState) {
 	default:
 		s.ErrorLog.Println("Got new state:", state.String())
 	}
-	s.counter.Unlock()
 }
 
 // ServeStatus serves Status report
