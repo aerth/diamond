@@ -42,7 +42,8 @@ type Server struct {
 	// Socket listener that accepts admin commands
 	listenerSocket net.Listener
 	socketed       bool // true if we have started listening on a socket
-
+	customCommander func(args string, reply *string) error
+	
 	// TCP Listener that can be stopped
 	listenerTCP net.Listener
 	listenerTLS net.Listener

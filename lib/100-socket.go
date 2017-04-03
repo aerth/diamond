@@ -38,6 +38,13 @@ type rpcpacket struct {
 	parent *Server // unexported so that only Command can access
 }
 
+// CustomCommander can be reassigned
+
+func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
+	s.customCommander = duck
+}
+
+
 // Command to process (RPC via UNIX socket)
 func (p *rpcpacket) Command(args string, reply *string) error {
 	if p.parent.Config.Debug {
@@ -59,6 +66,18 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	case strings.HasPrefix(args, "HELLO from "):
 		p.parent.ErrorLog.Println(args)
 		*reply = "HELLO from " + p.parent.Config.Name
+	case strings.HasPrefix(args, "CUSTOM "):
+		if p.parent.customCommander == nil {
+			p.parent.ErrorLog.Println("CUSTOM SOCKETS DISABLED:", args)
+			*reply = "CustomCommander DISABLED"
+			break
+		}
+		p.parent.ErrorLog.Println("CUSTOM SOCKET COMMAND:", args)
+		args = strings.TrimPrefix(args, "CUSTOM ")
+		err := p.parent.customCommander(args, reply)
+		if err != nil {
+			*reply = fmt.Sprint(*reply,err.Error())
+		}
 	case args == "status":
 		*reply = p.parent.Status()
 	case args == "update":
