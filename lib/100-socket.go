@@ -39,7 +39,6 @@ type rpcpacket struct {
 }
 
 // CustomCommander can be reassigned
-
 func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
 	s.customCommander = duck
 }
@@ -81,19 +80,13 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	case args == "status":
 		*reply = p.parent.Status()
 	case args == "update":
-		str, e := upgGitPull()
+		str, e := ToolGitPull()
 		if e != nil {
 			str += "\nERROR: " + e.Error()
 		}
 		*reply = str
-	case args == "upgrade":
-		str, e := upgrade()
-		if e != nil {
-			str += "\nERROR: " + e.Error()
-		}
-		*reply = str
-	case args == "rebuild":
-		str, e := upgMake()
+ 	case args == "rebuild":
+		str, e := ToolRebuild()
 		if e != nil {
 			str += "\nERROR: " + e.Error()
 		}
