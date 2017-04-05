@@ -2,29 +2,35 @@
 package main
 
 import "time"
-
+import "net/http"
+import "log"
 import diamond "github.com/aerth/diamond/lib" // ⋄
-/*
-This Diamond only serves 404 pages!
-*/
+
+// add default update, upgrade, redeploy
+func init(){
+	diamond.ToolGitPull = diamond.DefaultToolGitpull
+	diamond.ToolRebuild = diamond.DefaultToolRebuild
+	diamond.ToolUpgrade = diamond.DefaultToolUpgrade
+}
 func main() {
 	// Create new diamond.Server
 	d := diamond.NewServer(nil)
+	d.SetMux(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){d.ServeStatus(w, r)}))
 	d.Config.Name = "Diamond Demo ⋄"
-	d.SetConfigPath("config.json")
-	d.Config.Level = 1 // in three seconds we will switch gears
 	println(d.Config.Name)
-	n, _ := d.SaveConfig()
-	println("saved", n, "bytes to config.json")
-	d.ConfigPath("config.json")
+	d.Config.Addr = ":8777"
+	d.Config.Socket = "./diamond.sock"
+	d.Config.Level = 1 // in three seconds we will switch gears
+	d.Config.Debug = true
+	d.ErrorLog.SetFlags(log.Lshortfile)
 
-	// start in d.Config.Level
 	err := d.Start()
 	if err != nil {
 		println(err.Error())
 	}
 
 	// redefine HookLevel0
+	println("adding hook for runlevel 0")
 	quitchan := make(chan string, 1)
 	diamond.HookLevel0 = func() {
 		quitchan <- "goodbye!"
@@ -42,20 +48,16 @@ func main() {
 		println("[demo] Switching gears to 3")
 		d.Runlevel(3)
 	}()
-
+	println("Now open 'diamond-admin -s ./diamond.sock'")
 	// wait for quitchan
+	for {
 	select {
+	case <- time.After(10*time.Second):
+		println("Status:\n", d.Status())
 	case cya := <-quitchan:
 		println(cya)
+		return
+	}
 	}
 
 }
-
-var ccc = []byte(`{
-            "Name":"Diamonds! ⋄",
-            "Level":3,
-            "Addr":":8777",
-            "Socket":"/tmp/diamond.socket",
-            "Kicks": true,
-            "Kickable": true,
-    }`)
