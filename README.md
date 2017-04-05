@@ -12,6 +12,13 @@ Like a transmission, a diamond server has "gears". They are called "runlevels". 
 
 ![Screenshot of both diamond-admin and diamond server](https://github.com/aerth/diamond/blob/master/example/diamond-screenshot.png?raw=true)
 
+./diamond-admin -s diamond.sock telinit 3
+./diamond-admin -s diamond.sock telinit 1
+./diamond-admin -s diamond.sock telinit 0
+
+include CUSTOM prefix for custom commands (CustomCommander)
+./diamond-admin -s diamond.sock telinit CUSTOM commandname arguments
+
 The server can boot without listening, then the admin can shift gears into the
         'public HTTP mode', (runlevel 3) and back to 'single user mode' (runlevel 1).
 
@@ -57,10 +64,8 @@ This project is split into three sections.
 ```
 d := diamond.NewServer(nil)
 d.ErrorLog.SetOutput(mylogfile)
-d.ConfigPath("config.json")
 d.SetMux(myrouter)
 d.Start()
-d.Loop()
 
 ```
 
@@ -69,7 +74,7 @@ which is owned by the same UNIX user.
 The server has three modes of operation, which
 are called "runlevels". They are, in order:
 
-  * 0 = halt, stopping everything
+  * 0 = halt, stopping everything (not os.Exit!)
   * 1 = single user mode, only allowing RPC via socket
   * 3 = multiuser mode, allowing HTTP/HTTPS
 
@@ -177,6 +182,7 @@ bin/build.sh all # builds both
 
 Please submit a pull request if:
 
+  * I forgot something
   * You have an example for usage with a different http routing library
   * You have a bug fix
   * You have simplified the library, removed lines of code, etc
