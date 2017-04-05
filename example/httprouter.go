@@ -9,7 +9,7 @@ import (
 )
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Fprint(w, "Welcome!\n")
+	fmt.Fprint(w, "Welcome to Diamond!\nOpen diamond-admin -s diamond.sock\n")
 }
 
 func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -22,8 +22,8 @@ func main() {
 	router.GET("/hello/:name", Hello)
 
 	s := diamond.NewServer(router)
-
-	s.ConfigPath("config.json")
+	s.Config.Socket = "diamond.sock"
+	s.Config.Addr = ":8080"
 	s.Start()
 	select {
 	case quitmsg := <-s.Done:
