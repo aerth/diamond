@@ -12,9 +12,13 @@ Like a transmission, a diamond server has "gears". They are called "runlevels". 
 
 ![Screenshot of both diamond-admin and diamond server](https://github.com/aerth/diamond/blob/master/example/diamond-screenshot.png?raw=true)
 
+You can pass commands as arguments to diamond-admin
+
+```
 ./diamond-admin -s diamond.sock telinit 3
 ./diamond-admin -s diamond.sock telinit 1
 ./diamond-admin -s diamond.sock telinit 0
+```
 
 include CUSTOM prefix for custom commands (CustomCommander)
 ./diamond-admin -s diamond.sock telinit CUSTOM commandname arguments
