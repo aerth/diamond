@@ -43,7 +43,6 @@ func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
 	s.customCommander = duck
 }
 
-
 // Command to process (RPC via UNIX socket)
 func (p *rpcpacket) Command(args string, reply *string) error {
 	if p.parent.Config.Debug {
@@ -80,12 +79,18 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	case args == "status":
 		*reply = p.parent.Status()
 	case args == "update":
+		if ToolGitPull == nil {
+			return fmt.Errorf("git pull is not enabled")
+		}
 		str, e := ToolGitPull()
 		if e != nil {
 			str += "\nERROR: " + e.Error()
 		}
 		*reply = str
  	case args == "rebuild":
+		if ToolRebuild == nil {
+			return fmt.Errorf("rebuilding not enabled")
+		}
 		str, e := ToolRebuild()
 		if e != nil {
 			str += "\nERROR: " + e.Error()
@@ -95,23 +100,6 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		*reply = "Redeploying ⋄"
 		p.parent.respawn()
 		p.parent.telinit <- 0
-	case args == "reConfig":
-		*reply = "ReConfiguring ⋄"
-		conf, e := readconf(p.parent.configpath)
-		if e != nil {
-			*reply = e.Error()
-		}
-		p.parent.Config = conf
-		// err := p.parent.ReloadConfig()
-		// if err != nil {
-		// 	*reply = err.Error()
-		// }
-		cur := p.parent.level
-		if cur != 1 {
-			p.parent.telinit <- 1 // close http listener
-		}
-		p.parent.telinit <- cur // reinit current runlevel
-
 	case args == "KICK":
 		if p.parent.Config.Kickable {
 			*reply = "OKAY"
@@ -120,9 +108,12 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 		} else {
 			*reply = "NO WAY"
 		}
+	default:
+		p.parent.ErrorLog.Println("New Socket Command:", args)
 	}
 
 	if p.parent.Config.Debug {
+		p.parent.logf(" CMD: %s", args)
 		p.parent.logf("REPL: %s", *reply)
 	}
 	return nil

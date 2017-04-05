@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	// Version 0.4
-	version = "0.4"
+	// Version 0.5
+	version = "0.5"
 
 	// CHMODDIR default permissions for directory create
 	CHMODDIR os.FileMode = 0750
@@ -44,14 +44,14 @@ func NewServer(mux ...http.Handler) *Server {
 	s.Config.Addr = "127.0.0.1:8000"
 	s.Config.Kickable = true
 	s.Config.Kicks = true
-	s.Config.Name = "Diamond ⋄ 4"
+	s.Config.Name = "Diamond ⋄ "+version
 	s.Config.Socket = os.TempDir() + "/diamond.sock"
 	s.Config.DoCycleTest = false
 	s.Config.Level = 3
 	return s
 }
 
-// SetMux server
+// SetMux replaces current handler with 'mux'
 func (s *Server) SetMux(mux http.Handler) {
 	srv := &http.Server{Handler: mux}
 	srv.ReadTimeout = time.Duration(time.Second)
@@ -60,12 +60,7 @@ func (s *Server) SetMux(mux http.Handler) {
 	s.Server = srv
 }
 
-// SetConfigPath path
-func (s *Server) SetConfigPath(path string) {
-	s.configpath = path
-}
-
-// Start the Diamond Construct. Should be done after Configuration.
+// Start the admin socket, and enter runlevel: s.Config.Level
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() (err error) {
 	s.ErrorLog.Println("Diamond Construct ⋄", version, "Initialized")
@@ -115,10 +110,11 @@ func (s *Server) Start() (err error) {
 	return nil // no errors
 }
 
-// NoSignals prevents the server from listening for signals (like SIGHUP)
-// Otherwise, it waits for ctrl+c and exits properly, going to runtime 0
-func (s *Server) NoSignals() {
-	s.signal = false
+// Signals by default is true, if we get a signal (such as SIGINT), we switch
+// to runlevel 0, respecting any custom hooks.
+// Use s.Signals(false) to catch them yourself (not tested)
+func (s *Server) Signals(catch bool) {
+	s.signal = catch
 }
 
 // Runlevel switches the current diamond server's runlevel

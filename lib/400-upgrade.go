@@ -4,6 +4,8 @@ import (
 	"context"
 	"os/exec"
 	"os"
+	"time"
+	"github.com/aerth/spawn"
 )
 
 // ToolGitPull ...
@@ -12,10 +14,10 @@ var ToolGitPull = func()( output string, err error ){ return }
 // ToolRebuild ...
 var ToolRebuild = func()( output string, err error ){ return }
 
-// ToolRedeploy ...
-var ToolRedeploy = func()( output string, err error ){ return }
+// ToolUpgrade ...
+var ToolUpgrade = func()( output string, err error ){ return }
 
-func defaultgitpull() (string, error) { // RPC: update
+func DefaultToolGitpull() (string, error) { // RPC: update
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, "git", "pull", "origin", "master")
 	b, er := cmd.CombinedOutput()
@@ -24,7 +26,7 @@ func defaultgitpull() (string, error) { // RPC: update
 	}
 	return string(b), nil
 }
-func defaultrebuild() (string, error) { // RPC: rebuild
+func DefaultToolRebuild() (string, error) { // RPC: rebuild
 	buildfile := "bin/build.sh"
 	buildargs := ""
 	ctx := context.Background()
@@ -39,7 +41,7 @@ func defaultrebuild() (string, error) { // RPC: rebuild
 	return string(b), nil
 }
 
-func defaultupgrade() (string, error) { // RPC: upgrade
+func DefaultToolUpgrade() (string, error) { // RPC: upgrade
 	s, e := ToolGitPull()
 	if e != nil {
 		return s, e
@@ -49,4 +51,23 @@ func defaultupgrade() (string, error) { // RPC: upgrade
 		return s + s2, e
 	}
 	return s + s2, e
+}
+
+func (s *Server) respawn() {
+	s.ErrorLog.Printf("Respawning %s", time.Now())
+	spawn.Spawn()
+}
+
+// Kick ! Another Diamond is occupying our socket. Let's kick it!
+func (s *Server) Kick() string {
+	client, e := NewClient(s.Config.Socket)
+	if e != nil {
+		return e.Error()
+	}
+	reply, e := client.Send("KICK")
+	if e != nil {
+		return reply+e.Error()
+	}
+	return reply
+
 }

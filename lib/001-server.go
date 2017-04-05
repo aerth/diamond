@@ -19,7 +19,7 @@ import (
 const stderr = "stderr"
 
 // Server runlevels
-// *  0 = halt (os.Exit(0))
+// *  0 = halt (NOT os.Exit(0))
 // *  1 = single user mode (default) kills listenerTCP
 // *  3 = multiuser mode (public http) boots listenerTCP
 type Server struct {
@@ -43,7 +43,7 @@ type Server struct {
 	listenerSocket net.Listener
 	socketed       bool // true if we have started listening on a socket
 	customCommander func(args string, reply *string) error
-	
+
 	// TCP Listener that can be stopped
 	listenerTCP net.Listener
 	listenerTLS net.Listener
@@ -73,6 +73,14 @@ func (m *mucount) Up(t ...string) (current uint64) {
 	for _, i := range t {
 		m.m[i]++
 		current = m.m[i]
+	}
+	return
+}
+func (m *mucount) Zero(t ...string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, i := range t {
+		m.m[i] = 0
 	}
 	return
 }
@@ -120,23 +128,40 @@ func (s *Server) Level() int {
 	return s.level
 }
 
+// String returns a status report string
+func (s *Server) String() string {
+	return s.Status()
+}
+
 // Status returns a status report string
 func (s *Server) Status() string {
 	if s == nil {
 		return ""
 	}
-	str := listnstr(s.level)
+	var out string
+	out += fmt.Sprintf("Server Name: %s\n", s.Config.Name)
+	out += fmt.Sprintf("Diamond Version: %s\n", version)
+	out += fmt.Sprintf("Default Runlevel: %v\n", s.Config.Level)
 	s.levellock.Lock()
-	out := fmt.Sprintf("Server Name: %s\nDiamond Version: %s\nCurrent Runlevel: %v\nDebug: %v\n"+
-		"Socket: %s\nAddr: %s (%s)\nDefault Level: %v\nUptime: %s\n"+
-		"Active Connections: %v\nTotal Connections: %v\nPath: %s\nExecutable: %s",
-		s.Config.Name, version, s.level, s.Config.Debug,
-		s.Config.Socket,
-		s.Config.Addr,
-		str,
-		s.Config.Level, time.Since(s.since), s.counters.Uint64("active"),
-		s.counters.Uint64("total"), os.Getenv("PWD"), exeinfo())
+	out += fmt.Sprintf("Current Runlevel: %v\n", s.level)
+	str := listnstr(s.level)
 	s.levellock.Unlock()
+	out += fmt.Sprintf("Socket: %s\n", s.Config.Socket)
+	out += fmt.Sprintf("Addr: %s (%s)\n", s.Config.Addr, str)
+	out += fmt.Sprintf("Uptime: %s\n", time.Since(s.since))
+	out += fmt.Sprintf("Recent Connections: %v\n", s.counters.Uint64("active"))
+	out += fmt.Sprintf("Total Connections: %v\n", s.counters.Uint64("total"))
+	if s.Config.Debug {
+		out += fmt.Sprintf("Debug: %v\n", s.Config.Debug)
+		wd, _ := os.Getwd()
+		if wd != "" {
+			out += fmt.Sprintf("Working Directory: %s\n", wd)
+		}
+		exe, _ := os.Executable()
+		if exe != "" {
+			out += fmt.Sprintf("Executable: %s", exe)
+		}
+	}
 	return out
 }
 

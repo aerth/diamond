@@ -65,7 +65,7 @@ func (s *Server) serveHTTP() {
 
 			name := listener.Addr().String()
 			e := s.Server.Serve(listener)
-			if e != nil {
+			if e != nil && !strings.Contains(e.Error(), "use of closed network connection") && s.Config.Debug {
 				s.ErrorLog.Printf("%s", e)
 			}
 			s.ErrorLog.Println("Listener stopped:", name)
