@@ -16,6 +16,7 @@ import (
 var (
 	sock        = flag.String("s", "", "path to socket")
 	refreshtime = flag.Duration("r", time.Minute*30, "refresh status duration")
+	clientname = "ADMIN"
 )
 
 const (
@@ -44,8 +45,12 @@ func main() {
 	try := 0
 Start:
 	try++
-	client := diamond.NewClient(socketpath)
-	client.Name = "ADMIN"
+	client, e := diamond.NewClient(socketpath)
+	if e != nil {
+		println(e.Error())
+		os.Exit(2)
+	}
+	client.Name = clientname
 	r, e := client.Send("HELLO from " + client.Name)
 	if e != nil {
 		if strings.Contains(e.Error(), "no such file or directory") {
@@ -81,7 +86,7 @@ Start:
 			println(rerr)
 		}
 
-		os.Exit(0)
+		os.Exit(222)
 	}
 
 	// clix library: create the menubar once,
@@ -132,7 +137,7 @@ Start:
 		mm.NewItem("Halt Server")
 		mm.NewItem("Single User Mode")
 		mm.NewItem("Multi User Mode")
-		mm.NewItem("Upgrade Server")
+		mm.NewItem("Update Server")
 		mm.NewItem("Rebuild Server")
 		mm.NewItem("Redeploy Server")
 		mm.NewItem("Save Log Buffer")
@@ -169,8 +174,8 @@ Start:
 				cmd = "telinit 3"
 			case "Custom Multi User Mode":
 				cmd = "telinit 4"
-			case "Upgrade Server":
-				cmd = "upgrade"
+			case "Update Server":
+				cmd = "update"
 			case "Rebuild Server":
 				cmd = "rebuild"
 			case "Redeploy Server":
