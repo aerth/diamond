@@ -21,20 +21,14 @@ You can pass commands as arguments to diamond-admin
 ```
 
 include CUSTOM prefix for custom commands (CustomCommander)
-./diamond-admin -s diamond.sock telinit CUSTOM commandname arguments
 
-The server can boot without listening, then the admin can shift gears into the
-        'public HTTP mode', (runlevel 3) and back to 'single user mode' (runlevel 1).
+```./diamond-admin -s diamond.sock telinit CUSTOM commandname arguments```
+
+The server can boot without listening, then the admin can shift gears into the 'public HTTP mode', (runlevel 3) and back to 'single user mode' (runlevel 1).
 
 While not listening, *another server* (possible another **diamond**) can occupy that port.
-Configuration allows a "default runlevel", either 1 or 3.
 
-```
-var quitchan = make(chan string, 1)
-diamond.HookLevel0 = func() {
-  quitchan <- "runlevel 0 attained"
-}
-```
+Configuration allows a "default runlevel", either 1 or 3.
 
 Diamond allows the administrator (via UNIX socket)
 to do more than just start and stop the process.
@@ -45,8 +39,6 @@ diamond-admin -s $SOCKETNAME
 
 
 Now your application has runlevels!
-
-```d.Loop() blocks until runlevel 0 has been reached```
 
 Once connected to the UNIX socket, the administrator can:
 

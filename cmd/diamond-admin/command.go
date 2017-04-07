@@ -16,22 +16,25 @@ import (
 var (
 	sock        = flag.String("s", "", "path to socket")
 	refreshtime = flag.Duration("r", time.Minute*30, "refresh status duration")
-	clientname = "ADMIN"
+	clientname  = "ADMIN" // use linker flag to change at compilation time
+	socketpath  string    // use linker flag or CLI flag
 )
 
 const (
 	cmdStatus = "status"
+	stderr    = "stderr"
 )
 
 var (
-	msg, resp  string // to display in the Entry screen
-	resperr    error
-	socketpath string //
+	msg, resp string // to display in the Entry screen
+	resperr   error
 )
 
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
+
+// what a great main function
 func main() {
 	flag.Parse()
 	if *sock == "" && socketpath == "" {
@@ -69,14 +72,9 @@ Start:
 		os.Exit(2)
 	}
 
-	client.Server = strings.TrimPrefix(r, "HELLO from ")
+	client.ServerName = strings.TrimPrefix(r, "HELLO from ")
 	args := strings.Join(flag.Args(), " ")
-	if args != "" {
-
-		if strings.Contains(args, "help") || strings.HasPrefix(args, "-") {
-			flag.Usage()
-			os.Exit(2)
-		}
+	if args != "" && !strings.HasPrefix(args, "-") {
 		println("Command:", args)
 		rp, rerr := client.Send(args)
 		if rp != "" {
@@ -84,9 +82,13 @@ Start:
 		}
 		if rerr != nil {
 			println(rerr)
+			os.Exit(222)
 		}
-
-		os.Exit(222)
+		if rp == "" {
+			println("empty reply from server")
+			os.Exit(222)
+		}
+		os.Exit(0)
 	}
 
 	// clix library: create the menubar once,
@@ -101,15 +103,14 @@ Start:
 		}
 		if msg == "" {
 			if try != 1 {
-				msg = "Reconnected to: " + client.Server
+				msg = "Reconnected to: " + client.ServerName
 			} else {
-				msg = "Connected to: " + client.Server
+				msg = "Connected to: " + client.ServerName
 			}
 		}
 
-		b := scrol.Buffer.Bytes()
-		scrol.Buffer.Reset()
 		if msg != "" {
+			b := scrol.Buffer.Bytes()
 			scrol.Buffer.WriteString(msg)
 			scrol.Buffer.WriteString("\n\n\n\n")
 			scrol.Buffer.Write(b)
@@ -133,17 +134,18 @@ Start:
 		resperr = nil
 		resp = ""
 
-		mm.NewItem("Check Server Status")
-		mm.NewItem("Halt Server")
-		mm.NewItem("Single User Mode")
-		mm.NewItem("Multi User Mode")
-		mm.NewItem("Update Server")
-		mm.NewItem("Rebuild Server")
-		mm.NewItem("Redeploy Server")
-		mm.NewItem("Save Log Buffer")
+		mm.NewItem("Check Server Status") // status
+		mm.NewItem("Halt Server")         // tells user to use telinit 0
+		mm.NewItem("Single User Mode")    // telinit 1
+		mm.NewItem("Multi User Mode")     // telinit 3
+		mm.NewItem("Redeploy Server")     // redeploy
+		mm.NewItem("Update Server")       // update (must be defined)
+		mm.NewItem("Rebuild Server")      // redeploy (must be defined)
+		mm.NewItem("Clear Buffer")        // save entire session to /tmp file
+		mm.NewItem("Save Buffer")         // save entire session to /tmp file
 
 		entry := clix.NewEntry(mm.GetScreen())
-		mm.AddEntry("Other", entry)
+		mm.AddEntry("Other", entry) // manual command
 
 		mm.NewItem("Quit Admin")
 
@@ -151,6 +153,7 @@ Start:
 		ev.AddMenuBar(mm)
 		ev.Launch()
 		mm.GetScreen().Show()
+
 		var cmd string
 
 		select {
@@ -167,7 +170,6 @@ Start:
 				cmd = "telinit 1"
 			case "Check Server Status":
 				cmd = cmdStatus
-
 			case "Single User Mode":
 				cmd = "telinit 1"
 			case "Multi User Mode":
@@ -180,7 +182,10 @@ Start:
 				cmd = "rebuild"
 			case "Redeploy Server":
 				cmd = "redeploy"
-			case "Save Log Buffer":
+			case "Clear Buffer":
+				scrol.Buffer.Truncate(0)
+				continue
+			case "Save Buffer":
 				tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
 				if e == nil {
 					scrol.Buffer.WriteTo(tmpfile)
@@ -225,6 +230,16 @@ Start:
 		}()
 
 		// do it
+		/*
+
+			Commands:
+
+				Enter Runlevel: telinit [#]
+				Restart Executable: redeploy
+
+
+
+		*/
 		switch {
 		case cmd == "", cmd == "quit":
 			mm.GetScreen().Fini()
@@ -232,9 +247,6 @@ Start:
 		case cmd == "Halt Server":
 			msg = "Are you sure? Please select OTHER and type: telinit 0" // to prevent accidental halt
 			continue
-		case cmd == "restart":
-			cmd = "redeploy"
-			fallthrough
 		case cmd == "stop":
 			cmd = "telinit 0"
 			fallthrough
@@ -244,25 +256,19 @@ Start:
 			if resp == "DONE" {
 				resp, resperr = client.Send(cmdStatus)
 			}
-		case strings.HasPrefix(cmd, "load"):
-			msg = "Load: " + cmd
-			resp, resperr = client.Send(cmd)
-		case strings.HasPrefix(cmd, "import"):
-			msg = "Import: " + cmd
-			resp, resperr = client.Send(cmd)
-
-		case cmd == "backup", cmd == "upgrade", cmd == "rebuild", cmd == cmdStatus:
-			resp, resperr = client.Send(cmd)
-
+		case cmd == "restart":
+			cmd = "redeploy"
+			fallthrough
 		case cmd == "redeploy":
 			resp, resperr = client.Send(cmd)
 			if strings.Contains(resp, "Redeploying") {
 				<-time.After(200 * time.Millisecond)
 				resp, resperr = client.Send(cmdStatus)
 			}
+
 		// not a known command, lets try RPC anyways
 		default:
-			msg = "Trying new command: " + cmd
+			msg = "Alien: " + cmd
 			resp, resperr = client.Send(cmd)
 		}
 		tmp <- 1

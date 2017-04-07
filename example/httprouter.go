@@ -1,3 +1,6 @@
+//This example shows usage with httprouter library
+//Build, run, and visit http://127.0.0.1:8080/hello/world
+
 package main
 
 import (
@@ -8,18 +11,18 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, "Welcome to Diamond!\nOpen diamond-admin -s diamond.sock\n")
 }
 
-func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprintf(w, "hello, %s!\n", ps.ByName("name"))
 }
 
 func main() {
 	router := httprouter.New()
-	router.GET("/", Index)
-	router.GET("/hello/:name", Hello)
+	router.GET("/", index)
+	router.GET("/hello/:name", hello)
 
 	s := diamond.NewServer(router)
 	s.Config.Socket = "diamond.sock"
