@@ -25,7 +25,6 @@
 package diamond
 
 import (
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -33,154 +32,140 @@ import (
 
 import "log"
 
-// just for example
-type dx struct{}
-
-var diamond dx
-var mux http.Handler
-
-func (d dx) NewServer(mux ...http.Handler) *Server {
-	return NewServer(mux...)
-}
-
 var s = NewServer()
 var testAddr = "127.0.0.1:30000"
 var testClient *Client
 var testSocket = "./delete-me"
 
 func init() {
-
+	println("initializing test client")
+	s.Signals(false)
 	log.SetFlags(log.Lshortfile)
 	var err error
 	testClient, err = NewClient(testSocket)
 	if err != nil {
 		panic(err)
 	}
-
 	s.ErrorLog.SetFlags(log.Lshortfile)
+	s.ErrorLog.SetPrefix("Diamond [test]: ")
 }
 
 func up() error {
 	reply, err := testClient.Send("status")
 	if reply != "" {
-		log.Println("Status Reply:\n" + reply)
+		s.ErrorLog.Printf("Status Reply:\n" + reply)
 	}
 	return err
+}
+
+func stat() (string, error) {
+	return testClient.Send("status")
 }
 
 func TestNewServer(t *testing.T) {
 	s.Config.Socket = testSocket
 	s.Config.Addr = testAddr
+	println("starting first server")
+	s.Config.Name = t.Name()
+	s.ErrorLog.SetPrefix(t.Name()+": ")
 	err := s.Start()
 	if err != nil {
-		log.Println(err.Error())
+		t.Log(err.Error())
 		t.FailNow()
+		return
 	}
 
+	// check if admin command 'status' works
 	if err := up(); err != nil {
-		log.Println("Wanted server to be up, got down", err)
+		t.Log("Wanted server to be up, got down", err)
 		t.FailNow()
+		return
 	}
 
-	// quit properly
+	s.Runlevel(1)
 	s.Runlevel(0)
 
+	//<- time.After(0*time.Millisecond)
 	// check if quit
 	if nonzero := s.Level(); nonzero != 0 {
-		log.Println(nonzero)
+		t.Log("Wanted 0, got:", nonzero)
 		t.FailNow()
+		return
 	}
 
 	if err := up(); err == nil {
-		log.Println("Expected not to be up, got up")
+		t.Log("Expected not to be up, got up")
 		t.FailNow()
+		return
 	}
 
-}
-
-func TestKick(t *testing.T) {
-	s.Config.Socket = testSocket
-	s.Config.Name = "TestKick"
-	s.ErrorLog.SetPrefix("TestKick: ")
-	err := s.Start()
-	if err != nil {
-		log.Println(err.Error())
-		t.FailNow()
-	}
-
-	if err = up(); err != nil {
-		log.Println("Wanted server to be up, got down", err)
-		t.FailNow()
-	}
-
-	reply, err := testClient.Send("KICK")
-	if reply != "OKAY" {
-		log.Printf("Wanted \"OKAY\", got %q\n", reply)
-		t.FailNow()
-	}
-	if err != nil {
-		log.Println("error:", err.Error())
-		t.FailNow()
-	}
-
-	t1 := time.Now()
-	for i, err := 0, up(); err != nil && i < 10; i++ {
-		<-time.After(300 * time.Millisecond)
-		log.Printf("Attempt %v, wanted server to be down, got up.", i)
-		t.Fail()
-	}
-	log.Printf("Took %s to go down", time.Now().Sub(t1))
-	<-time.After(time.Second)
+	t.Log(t.Name(), "Passed")
 
 }
 
 func TestRunlevel1(t *testing.T) {
 	s.Config.Level = 1
-	s.Config.Name = "TestRunlevel1"
-	s.ErrorLog.SetPrefix("TestRunlevel1: ")
+	s.Config.Name = t.Name()
+	s.ErrorLog.SetPrefix(t.Name()+": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
 	if err != nil {
-		log.Println(err.Error())
+		t.Log(err.Error())
 		t.FailNow()
 	}
+	// quit properly
+	defer func() {
+		s.Runlevel(0)
+		<-time.After(time.Second)
+	}()
+
 	reply, err := testClient.Send("status")
 	if err != nil {
 		println("Error:", err.Error())
+		t.FailNow()
+		return
 	}
 
 	if reply != "" {
 		println("Reply:", reply)
 	}
-	s.Runlevel(0)
+
+
 }
 func TestRunlevel3(t *testing.T) {
-
-	s.Config.Name = "TestRunlevel3"
-	s.ErrorLog.SetPrefix("TestRunlevel3: ")
+	s.Config.Name = t.Name()
 	s.Config.Level = 3
+	t.Log(s.Config.Level)
+	s.ErrorLog.SetPrefix(t.Name()+": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
 	if err != nil {
-		log.Println(err.Error())
+		t.Log(err.Error())
 		t.FailNow()
+		return
 	}
+	// quit properly
+	defer func() {
+		s.Runlevel(0)
+		<-time.After(time.Second)
+	}()
+
+	<-time.After(time.Second)
 	reply, err := testClient.Send("status")
 	if err != nil {
 		println("Error:", err.Error())
+		t.Fail()
 	}
 
 	if reply != "" {
 		println("Reply:", reply)
 	}
-	if !strings.Contains(reply, "Current level: 3") {
-		println("Wanted: Current level: 3, could not find")
+	if !strings.Contains(reply, "Current Runlevel: 3") {
+		println("Wanted: Current Runlevel: 3, could not find")
 		t.FailNow()
 	}
-	s.Runlevel(0)
-	<-time.After(time.Second)
 }
 
 type teststruct struct {
@@ -196,12 +181,20 @@ func TestClientCommands(t *testing.T) {
 	s.Config.Kickable = false
 	err := s.Start()
 	if err != nil {
-		log.Println(err.Error())
+		t.Log(err.Error())
 		t.FailNow()
 	}
+	// quit properly
+	defer func() {
+		s.Runlevel(0)
+		<-time.After(time.Second)
+	}()
+
 	s.Runlevel(1)
+	<-time.After(time.Second)
 	cases := []teststruct{
-		{"status", "Server Name: Diamond ⋄ 0.5\nDiamond Version: 0.5\nDefault Runlevel: 1\nCurrent Runlevel: 1\nSocket: ./delete-me\nAddr: 127.0.0.1:30000 (Not Listening)", "Recent Connections: 0\nTotal Connections: 0\n"},
+		{"status", "Server Name: Diamond ⋄ " + version + "\n", ""},
+		//{"status", "Server Name: Diamond ⋄ "+version+"\nDiamond Version: "+version+"\nDefault Runlevel: 1\nCurrent Runlevel: 1\nSocket: ./delete-me\nAddr: 127.0.0.1:30000 (Not Listening)", "Recent Connections: 0\nTotal Connections: 0\n"},
 		{"help", "Commands:", ""},
 		{"KICK", "NO WAY", ""}, // KICK is disabled in this test, tested in TestKick(t)
 		{"CUSTOM help", "not defined:", ""},
@@ -211,39 +204,100 @@ func TestClientCommands(t *testing.T) {
 	}
 	var reply string
 	for i, v := range cases {
-		log.Printf("Command #%v %v", i, v.Test)
+		t.Logf("Command #%v %v", i, v.Test)
 		reply, err = testClient.Send(v.Test)
 		if err != nil {
-			log.Println("Error:", err)
+			t.Log("Error:", err)
 			t.FailNow()
 		}
 
-		if v.PassPrefix != "" && strings.HasPrefix(reply, v.PassPrefix) {
-			log.Printf("found prefix: %q", v.PassPrefix)
+		if strings.HasPrefix(reply, v.PassPrefix) {
+			if v.PassSuffix != "" { t.Logf("found prefix: %q", v.PassPrefix) }
 		} else {
-			log.Printf("expected prefix: \n%q, got: \n%q", v.PassPrefix, reply)
+			t.Logf("expected prefix: \n%q, got: \n%q", v.PassPrefix, reply[:len(v.PassPrefix)])
 			t.FailNow()
 		}
 
-		if v.PassSuffix != "" && strings.HasSuffix(reply, v.PassSuffix) {
-			log.Printf("found suffix: %q", v.PassSuffix)
+		if strings.HasSuffix(reply, v.PassSuffix) {
+			if v.PassSuffix != "" { t.Logf("found suffix: %q", v.PassSuffix)
+			}
 		} else {
-			log.Printf("expected \n%q, got \n%q", v.PassSuffix, reply)
+			t.Logf("expected \n%q, got \n%q", v.PassSuffix, reply[:len(v.PassSuffix)])
 			t.FailNow()
 		}
-
 	}
-	log.Println("Completed")
+
 }
 
 var uptime time.Duration
 
+func TestKick(t *testing.T) {
+	println("starting test kick")
+	s.Config.Socket = testSocket
+	s.Config.Name = t.Name()
+	s.Config.Kickable = true
+	s.ErrorLog.SetPrefix(t.Name()+": ")
+	err := s.Start()
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
+	}
+	// quit properly
+	defer func() {
+		s.Runlevel(0)
+		<-time.After(time.Second)
+		}()
+
+		<-time.After(time.Second)
+		if err = up(); err != nil {
+			t.Log("Wanted server to be up, got down", err)
+			t.FailNow()
+			return
+		}
+
+		println("Testing KICK!")
+		reply, err := testClient.Send("KICK")
+		if reply != "OKAY" {
+			t.Logf("Wanted \"OKAY\", got %q\n", reply)
+			t.FailNow()
+			return
+		}
+		if err != nil {
+			t.Log("error:", err.Error())
+			t.FailNow()
+			return
+		}
+
+		t1 := time.Now()
+		for i := 0; i < 10; i++ {
+
+			<-time.After(300 * time.Millisecond)
+			 reply, err := stat()
+			 if err != nil {
+				 if err.Error() != "dial unix ./delete-me: connect: no such file or directory" {
+				 	t.Log(t.Name(), "failed:",err)
+					t.Fail()
+			 	}
+				 break
+			 }
+			 if reply != "" {
+				 t.Logf("Attempt %v, wanted server to be down, got: \n%s", i, reply)
+				 t.Fail()
+			 }
+			 t.Log(i)
+		}
+		t.Logf("Took %s to go down", time.Now().Sub(t1))
+		<-time.After(time.Second)
+		return
+
+	}
 func TestUptime(t *testing.T) {
 	uptime = s.Uptime()
-	log.Printf("Testing took: %s", uptime.String())
+	t.Logf("Testing took: %s", uptime.String())
 }
 
-func TestRedeploy(t *testing.T) {
+
+func NoTestRedeploy(t *testing.T) {
 
 	reply, err := testClient.Send("redeploy")
 	if err != nil {
@@ -265,4 +319,5 @@ func TestRedeploy(t *testing.T) {
 
 func TestTeardown(t *testing.T) {
 	s.Runlevel(0)
+	<-time.After(time.Second)
 }

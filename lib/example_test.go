@@ -69,3 +69,14 @@ func Example() {
 	println(bye)
 	// }
 }
+
+
+// just for example to look good
+type dx struct{}
+
+var diamond dx
+var mux http.Handler
+
+func (d dx) NewServer(mux ...http.Handler) *Server {
+	return NewServer(mux...)
+}

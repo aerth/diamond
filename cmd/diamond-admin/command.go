@@ -1,3 +1,27 @@
+/*
+* The MIT License (MIT)
+*
+* Copyright (c) 2016,2017  aerth <aerth@riseup.net>
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+ */
+
 // Command a diamond server
 package main
 
@@ -22,6 +46,7 @@ var (
 
 const (
 	cmdStatus = "status"
+	cmdRedeploy = "redeploy"
 	stderr    = "stderr"
 )
 
@@ -34,7 +59,6 @@ func init() {
 	log.SetFlags(log.Lshortfile)
 }
 
-// what a great main function
 func main() {
 	flag.Parse()
 	if *sock == "" && socketpath == "" {
@@ -45,9 +69,139 @@ func main() {
 	if *sock != "" {
 		socketpath = *sock
 	}
-	try := 0
-Start:
-	try++
+	client := buildClient()
+	if len(flag.Args()) > 1 {
+		reply, err := client.Send(strings.Join(flag.Args()[1:], " "))
+		if err != nil {
+			println(err.Error())
+		}
+		if reply != "" {
+			println(reply)
+		}
+
+		return
+	}
+	mm := buildWindow()
+		for {
+			if resp != "" {
+				msg += resp
+			}
+			if msg == "" {
+				msg = "Connected to: " + client.ServerName
+			}
+
+		if msg != "" {
+			b := mm.GetScroller().Buffer.Bytes()
+			mm.GetScroller().Buffer.Truncate(0)
+			mm.GetScroller().Buffer.WriteString(msg)
+			mm.GetScroller().Buffer.WriteString("\n\n")
+			mm.GetScroller().Buffer.Write(b)
+		}
+		// Reset messages each loop after setting message
+		msg = ""
+		resp = ""
+			buildMenu(mm)
+			mm.GetScroller().ScrollToEnd()
+			ev := handleKeyMouse(mm)
+			cmd := handleMenuInput(mm, ev)
+			if cmd == "quit" {
+				quit(mm)
+				return
+			}
+			resp, resperr = client.Send(cmd)
+			if resperr != nil {
+				mm.GetScreen().Fini()
+				println(resperr.Error())
+				os.Exit(111)
+			}
+			mm.GetScreen().Show()
+		}
+	}
+
+	func quit(mm *clix.MenuBar){
+		mm.GetScreen().Fini()
+		println("Check for updates often! https://github.com/aerth/diamond")
+	}
+
+	func buildWindow() *clix.MenuBar {
+		mm := clix.NewMenuBar(nil)
+		mm.SetMessage("⋄ DIAMOND CMD v0.2")
+		scrol := clix.NewScrollFrame("⋄")
+			mm.AttachScroller(scrol)
+			return mm
+	}
+func buildMenu(mm *clix.MenuBar){
+		mm.NewItem("Check Server Status") // status
+		mm.NewItem("Single User Mode")    // telinit 1
+		mm.NewItem("Multi User Mode")     // telinit 3
+		mm.NewItem("Redeploy Server")     // redeploy
+		mm.NewItem("Clear Buffer")        // save entire session to /tmp file
+		mm.NewItem("Save Buffer")         // save entire session to /tmp file
+		entry := clix.NewEntry(mm.GetScreen())
+		mm.AddEntry("Other", entry) // manual command
+		mm.NewItem("Quit Admin")
+	}
+
+func handleKeyMouse(mm *clix.MenuBar) *clix.EventHandler {
+		ev := clix.NewEventHandler()
+		ev.AddMenuBar(mm)
+		ev.Launch()
+		mm.GetScreen().Show()
+		return ev
+}
+
+
+func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
+		select {
+		case <-time.After(*refreshtime):
+
+			cmd = cmdStatus
+
+		case c := <-ev.Output:
+			mm.GetScreen().Show()
+			switch c.(string) {
+			case "Quit Admin":
+				cmd = "quit"
+			case "Check Server Status":
+				cmd = cmdStatus
+			case "Single User Mode":
+				cmd = "telinit 1"
+			case "Multi User Mode":
+				cmd = "telinit 3"
+			case "Update Server":
+				cmd = "update"
+			case "Rebuild Server":
+				cmd = "rebuild"
+			case "Redeploy Server":
+				cmd = cmdRedeploy
+			case "Clear Buffer":
+				mm.GetScroller().Buffer.Truncate(0)
+				mm.GetScreen().Clear()
+				mm.GetScreen().Show()
+				cmd = ""
+			case "Save Buffer":
+				tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
+				if e == nil {
+					mm.GetScroller().Buffer.WriteTo(tmpfile)
+					resp = "Saved to:" + tmpfile.Name()
+				}
+				if e != nil {
+					resp = e.Error()
+				}
+			default:
+				cmd = c.(string)
+			}
+		}
+
+return cmd
+}
+
+func notrunning() {
+	println("Server might not be running. Fix that first.")
+	os.Exit(2)
+}
+
+func buildClient() *diamond.Client {
 	client, e := diamond.NewClient(socketpath)
 	if e != nil {
 		println(e.Error())
@@ -91,192 +245,5 @@ Start:
 		os.Exit(0)
 	}
 
-	// clix library: create the menubar once,
-	// using a single window for the entire for loop
-	mm := clix.NewMenuBar(nil)
-	mm.SetMessage("⋄ DIAMOND")
-
-	scrol := clix.NewScrollFrame("⋄")
-	for {
-		if resp != "" {
-			msg = resp
-		}
-		if msg == "" {
-			if try != 1 {
-				msg = "Reconnected to: " + client.ServerName
-			} else {
-				msg = "Connected to: " + client.ServerName
-			}
-		}
-
-		if msg != "" {
-			b := scrol.Buffer.Bytes()
-			scrol.Buffer.WriteString(msg)
-			scrol.Buffer.WriteString("\n\n\n\n")
-			scrol.Buffer.Write(b)
-		}
-		mm.AttachScroller(scrol)
-		if resperr != nil {
-			if strings.Contains(resperr.Error(), "no such file or directory") {
-				mm.GetScreen().Fini()
-				println("Server is down.")
-				os.Exit(0)
-			}
-			if strings.Contains(resperr.Error(), "unexpected EOF") {
-				<-time.After(200 * time.Millisecond)
-				mm.GetScreen().Fini()
-
-				goto Start
-			}
-		}
-		// Reset messages each loop after setting message
-		msg = ""
-		resperr = nil
-		resp = ""
-
-		mm.NewItem("Check Server Status") // status
-		mm.NewItem("Halt Server")         // tells user to use telinit 0
-		mm.NewItem("Single User Mode")    // telinit 1
-		mm.NewItem("Multi User Mode")     // telinit 3
-		mm.NewItem("Redeploy Server")     // redeploy
-		mm.NewItem("Update Server")       // update (must be defined)
-		mm.NewItem("Rebuild Server")      // redeploy (must be defined)
-		mm.NewItem("Clear Buffer")        // save entire session to /tmp file
-		mm.NewItem("Save Buffer")         // save entire session to /tmp file
-
-		entry := clix.NewEntry(mm.GetScreen())
-		mm.AddEntry("Other", entry) // manual command
-
-		mm.NewItem("Quit Admin")
-
-		ev := clix.NewEventHandler()
-		ev.AddMenuBar(mm)
-		ev.Launch()
-		mm.GetScreen().Show()
-
-		var cmd string
-
-		select {
-		case <-time.After(*refreshtime):
-
-			cmd = cmdStatus
-
-		case c := <-ev.Output:
-			mm.GetScreen().Show()
-			switch c.(string) {
-			case "Quit Admin":
-				cmd = "quit"
-			case "restart":
-				cmd = "telinit 1"
-			case "Check Server Status":
-				cmd = cmdStatus
-			case "Single User Mode":
-				cmd = "telinit 1"
-			case "Multi User Mode":
-				cmd = "telinit 3"
-			case "Custom Multi User Mode":
-				cmd = "telinit 4"
-			case "Update Server":
-				cmd = "update"
-			case "Rebuild Server":
-				cmd = "rebuild"
-			case "Redeploy Server":
-				cmd = "redeploy"
-			case "Clear Buffer":
-				scrol.Buffer.Truncate(0)
-				continue
-			case "Save Buffer":
-				tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
-				if e == nil {
-					scrol.Buffer.WriteTo(tmpfile)
-					resp = "Saved to:" + tmpfile.Name()
-				}
-				if e != nil {
-					resp = e.Error()
-				}
-				continue
-			default:
-				cmd = c.(string)
-			}
-		}
-		tmp := make(chan int)
-		mm.GetScreen().Clear()
-		clix.Type(mm.GetScreen(), 1, 1, 1, "This may take a while...")
-		mm.GetScreen().Show()
-		var x = 1
-		t1 := time.Now()
-
-		go func() {
-		Waiting:
-			for {
-				select {
-				case <-time.After(100 * time.Millisecond):
-					if time.Now().Sub(t1) > time.Second*4 {
-						msg = "Timeout occured."
-						continue
-					}
-					x++
-					clix.Type(mm.GetScreen(), len("This may take a while..."), 1, 1, strings.Repeat(".", x))
-					mm.GetScreen().Show()
-					<-time.After(100 * time.Millisecond)
-					mm.GetScreen().Show()
-				case <-tmp:
-					mm.GetScreen().Clear()
-					mm.Present(true)
-					break Waiting
-				}
-			}
-			return
-		}()
-
-		// do it
-		/*
-
-			Commands:
-
-				Enter Runlevel: telinit [#]
-				Restart Executable: redeploy
-
-
-
-		*/
-		switch {
-		case cmd == "", cmd == "quit":
-			mm.GetScreen().Fini()
-			os.Exit(0)
-		case cmd == "Halt Server":
-			msg = "Are you sure? Please select OTHER and type: telinit 0" // to prevent accidental halt
-			continue
-		case cmd == "stop":
-			cmd = "telinit 0"
-			fallthrough
-		case strings.HasPrefix(cmd, "telinit"):
-			msg = "Runlevel: " + cmd
-			resp, resperr = client.Send(cmd)
-			if resp == "DONE" {
-				resp, resperr = client.Send(cmdStatus)
-			}
-		case cmd == "restart":
-			cmd = "redeploy"
-			fallthrough
-		case cmd == "redeploy":
-			resp, resperr = client.Send(cmd)
-			if strings.Contains(resp, "Redeploying") {
-				<-time.After(200 * time.Millisecond)
-				resp, resperr = client.Send(cmdStatus)
-			}
-
-		// not a known command, lets try RPC anyways
-		default:
-			msg = "Alien: " + cmd
-			resp, resperr = client.Send(cmd)
-		}
-		tmp <- 1
-
-	}
-}
-
-func notrunning() {
-	println("Server might not be running. Fix that first.")
-	os.Exit(2)
+return client
 }

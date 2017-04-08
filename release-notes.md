@@ -1,3 +1,7 @@
+# diamond v0.6
+
+further gutting
+
 # diamond v0.5
 
 lighter

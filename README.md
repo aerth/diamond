@@ -2,9 +2,9 @@
 
 [![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
 
-Turn your HTTP web application into a machine.
+Like a transmission, a diamond server has gears called "runlevels".
 
-Like a transmission, a diamond server has "gears". They are called "runlevels". You can define functions that are called when shifting to a runlevel. These are called:
+You can define functions that are called when shifting to a runlevel. These are called HookLevels:
 
   * ```diamond.HookLevel0``` runs when 0 is reached, before sending to quitchan
   * ```diamond.HookLevel1``` runs when 1 is reached
@@ -106,7 +106,8 @@ the actual running server.
 
 ## 2. Client / Command (diamond-admin)
 
-Adminstrative user must be the same unix user as the server.
+Library uses CHMODFILE permissions, defined by default as -rw-r----- (0640)
+
 
 Commands:
 

@@ -44,16 +44,16 @@ package diamond
 
 import (
 	"fmt"
-	"github.com/aerth/spawn"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/aerth/spawn"
 )
 
 var version = "0.6"
@@ -109,12 +109,15 @@ type Server struct {
 }
 
 // ToolUpdate if defined will be called after admin command: 'update', can be DefaultToolUpdate
+// Returned output and err will be sent to admin as socket reply
 var ToolUpdate func() (output string, err error)
 
 // ToolRebuild if defined will be called after admin command: 'update', can be DefaultToolRebuild
+// Returned output and err will be sent to admin as socket reply
 var ToolRebuild func() (output string, err error)
 
 // ToolUpgrade if defined will be called after admin command: 'upgrade', can be DefaultToolUpgrade
+// Returned output and err will be sent to admin as socket reply
 var ToolUpgrade func() (output string, err error)
 
 // NewServer returns a new server, ready to be configured or started.
@@ -148,6 +151,8 @@ func NewServer(mux ...http.Handler) *Server {
 	return s
 }
 
+var once sync.Once
+
 // Start the admin socket, and enter runlevel: s.Config.Level
 // End with s.RunLevel(0) to close the socket properly.
 func (s *Server) Start() (err error) {
@@ -155,9 +160,13 @@ func (s *Server) Start() (err error) {
 	if s.Config.Debug {
 		s.ErrorLog.SetFlags(log.Lshortfile)
 	}
-	// Socket listen timeout
-	getsocket := make(chan int, 1)
-	go admin(getsocket, s) // listen on unix socket
+	getsocket := admin(s)
+	go once.Do(func(){
+		s.ErrorLog.Println("once")
+		// Socket listen timeout
+		go s.signalcatch()
+	})
+
 	select {
 	case <-getsocket:
 		// good
@@ -166,6 +175,7 @@ func (s *Server) Start() (err error) {
 		s.ErrorLog.Println(err)
 		return err
 	}
+
 
 	go s.telcom() // launch telinit handler
 	if !s.socketed {
@@ -187,14 +197,14 @@ func (s *Server) signalcatch() {
 	if !s.signal {
 		return
 	}
+	s.ErrorLog.Println("Catching signal")
 	quitchan := make(chan os.Signal, 1)
 	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
-	select {
-	case sig := <-quitchan:
-		println("Diamond got signal:", sig.String()) // stderr
-		s.ErrorLog.Println("Diamond got signal:", sig.String())
-		s.Runlevel(0)
-	}
+	sig := <-quitchan
+	println("Diamond got signal:", sig.String()) // stderr
+	s.ErrorLog.Println("Diamond got signal:", sig.String())
+	s.Runlevel(0)
+	return
 }
 
 // Human readable
@@ -246,50 +256,6 @@ func (m *mucount) Uint64(t string) (current uint64) {
 	defer m.mu.Unlock()
 	current = m.m[t]
 	return
-}
-
-// DefaultToolUpdate runs the command "git pull origin master" from current working directory.
-//
-// See "ToolUpdate"
-func DefaultToolUpdate() (string, error) { // RPC: update
-	cmd := exec.Command("git", "pull", "origin", "master")
-	b, er := cmd.CombinedOutput()
-	if er != nil {
-		return string(b), er
-	}
-	return string(b), nil
-}
-
-// DefaultToolRebuild trys 'bin/build.sh', falls back on 'build.sh'
-//
-// See "ToolRebuild"
-func DefaultToolRebuild() (string, error) { // RPC: rebuild
-	buildfile := "bin/build.sh"
-	buildargs := ""
-	if _, err := os.Open(buildfile); err != nil {
-		buildfile = "build.sh"
-	}
-	cmd := exec.Command(buildfile, buildargs)
-	b, er := cmd.CombinedOutput()
-	if er != nil {
-		return string(b), er
-	}
-	return string(b), nil
-}
-
-// DefaultToolUpgrade runs 'ToolUpdate() && ToolRebuild() '
-//
-// See "ToolUpgrade"
-func DefaultToolUpgrade() (string, error) { // RPC: upgrade
-	s, e := ToolUpdate()
-	if e != nil {
-		return s, e
-	}
-	s2, e := ToolRebuild()
-	if e != nil {
-		return s + s2, e
-	}
-	return s + s2, e
 }
 
 func (s *Server) respawn() {

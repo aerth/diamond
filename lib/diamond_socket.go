@@ -81,17 +81,17 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 
 	// telinit
 	case args == "telinit 0":
-		p.parent.telinit <- 0
-		*reply = "DONE"
+		go p.parent.Runlevel(0)
+		*reply = "DONE: " + args
 	case args == "telinit 1":
 		p.parent.telinit <- 1
-		*reply = "DONE"
+		*reply = "DONE: " + args
 	case args == "telinit 3":
 		p.parent.telinit <- 3
-		*reply = "DONE"
+		*reply = "DONE: " + args
 	case args == "telinit 4":
 		p.parent.telinit <- 4
-		*reply = "DONE"
+		*reply = "DONE: " + args
 	// hello
 
 	case strings.HasPrefix(args, "HELLO from "):
@@ -148,19 +148,19 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	case args == "redeploy":
 		*reply = "Redeploying ⋄"
 		p.parent.respawn()
-		p.parent.telinit <- 0
+		p.parent.Runlevel(0)
 
 		// help
 	case args == "help":
 		*reply = "Commands: help telinit update* rebuild*"
 
-	// KICK
+	// get KICKed if kickable
 	case args == "KICK":
 		if p.parent.Config.Kickable {
 			*reply = "OKAY"
 			p.parent.ErrorLog.Println("Got KICKed")
 			go func() {
-				p.parent.telinit <- 0
+				p.parent.Runlevel(0)
 			}()
 		} else {
 			*reply = "NO WAY"
@@ -213,7 +213,10 @@ func (s *Server) socketAccept() error {
 }
 
 // Listen on s.Config.Socket for admin connections
-func admin(ch chan int, s *Server) {
+func admin(s *Server) (ch chan int){
+ch = make(chan int, 1)
+
+go func(){
 	var try = 0
 Okay:
 	if s.Config.Socket == "" {
@@ -298,11 +301,13 @@ Okay:
 		}
 
 	}
+}()
+
+return ch
 }
 
 func (s *Server) telcom() {
 	//s.ErrorLog.Println("\n\n\nTELCOM up\n\n\n")
-	go s.signalcatch()
 	for {
 		select {
 		case newlevel := <-s.telinit:
@@ -314,11 +319,8 @@ func (s *Server) telcom() {
 				//s.ErrorLog.Println("\n\n\nTELCOM down\n\n\n")
 				return
 			case 0:
-				s.ErrorLog.Printf("ENTERING RUNLEVEL 0")
-				s.runlevel0()
-				go func() {
-					s.telinit <- -1 // kill this goroutine
-				}()
+				//s.ErrorLog.Println("<-s.telinit 0 is no longer supported, use s.Runlevel(0)")
+				panic("<-s.telinit 0 is no longer supported, use s.Runlevel(0)")
 			case 1:
 				s.ErrorLog.Printf("ENTERING RUNLEVEL 1")
 				s.runlevel1()

@@ -33,8 +33,18 @@ import (
 
 // Runlevel switches the current diamond server's runlevel
 func (s *Server) Runlevel(i int) {
+	if i == 0 {
+		s.ErrorLog.Printf("ENTERING RUNLEVEL 0")
+		go func() {
+			s.telinit <- -1 // kill telinit goroutine
+		}()
+		s.runlevel0()
+		return
+	}
+
 	s.ErrorLog.Println("runlevel request:", i)
 	s.telinit <- i
+	return
 }
 
 // CustomCommander allows the admin (via unix socket) to send custom commands
@@ -51,12 +61,18 @@ func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
 
 // LevelString returns the current runlevel (string)
 func (s *Server) LevelString() string {
-	return strconv.Itoa(s.level)
+	s.levellock.Lock()
+	str := strconv.Itoa(s.level)
+	s.levellock.Unlock()
+	return str
 }
 
 // Level returns the current runlevel (int)
 func (s *Server) Level() int {
-	return s.level
+	s.levellock.Lock()
+	lvl := s.level
+	s.levellock.Unlock()
+	return lvl
 }
 
 // String returns diamond version
@@ -96,7 +112,7 @@ func (s *Server) Status() string {
 	return out
 }
 
-// Uptime returns duration since boot
+// Uptime returns duration since server creation
 func (s *Server) Uptime() time.Duration {
 	return time.Now().Sub(s.since)
 }
