@@ -24,7 +24,7 @@
 * SOFTWARE.
  */
 
-// Package diamond adds runlevels to a web application ⋄
+// Package diamond adds runlevels to a web application
 /*
 
  Using the diamond library is simple. See examples:
