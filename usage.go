@@ -1,4 +1,4 @@
-// The most simple Diamond ⋄ server
+// usage of diamond library
 package main
 
 import "time"
