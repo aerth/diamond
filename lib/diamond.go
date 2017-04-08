@@ -1,5 +1,3 @@
-// +build go1.8
-
 /*
 * The MIT License (MIT)
 *
