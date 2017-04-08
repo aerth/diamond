@@ -37,6 +37,18 @@ func (s *Server) Runlevel(i int) {
 	s.telinit <- i
 }
 
+// CustomCommander allows the admin (via unix socket) to send custom commands
+// Example duck function returns hello, world if admin sends "CUSTOM world" command:
+//
+// 	duck := func(args string, reply *string) error {
+// 		*reply = fmt.Sprintf("Hello, %s", args)
+// 		return nil
+// 	}
+//	s.CustomCommander(duck)
+func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
+	s.customCommander = duck
+}
+
 // LevelString returns the current runlevel (string)
 func (s *Server) LevelString() string {
 	return strconv.Itoa(s.level)

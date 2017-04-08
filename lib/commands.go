@@ -74,11 +74,6 @@ type rpcpacket struct {
 	parent *Server // unexported so that only Command can access
 }
 
-// CustomCommander can be reassigned
-func (s *Server) CustomCommander(duck func(args string, reply *string) error) {
-	s.customCommander = duck
-}
-
 // Command to process (RPC via UNIX socket)
 func (p *rpcpacket) Command(args string, reply *string) error {
 	p.parent.ErrorLog.Printf("ADMIN: %v", args)
