@@ -111,77 +111,21 @@ Adminstrative user must be the same unix user as the server.
 Commands:
 
   * telinit 0-4 - Tell the server to initialize runlevel X
-  * restart - Return to default runlevel
-  * stop - Short for telinit 0
-  * load - Load a configuration file (see CONFIG FILE)
-  * backup - Return an compressed archive of the database to be used with import
-  * import - Import a backup that was generated with the backup command
-  * update - Fetch latest source, build, install. does not restart.
+  * restart - Alias of 'redeploy'
+  * redeploy - Respawn executable (same args, current env)
+  * update - `git pull origin master` by default OFF. See `func init` in `usage.go`
   * upgrade - Fetch latest source, build, install. does not restart.
-  * redeploy - telinit 0 && relaunch binary (could be upgraded binary, same path.)
-  * reconfig - reload preset json file (use s.ConfigPath() to set)
+  * CUSTOM <command> - Execute custom command, see CustomCommander 'hello' duck
 
-
-
-## 3. Example server
-
-When using go get, you will notice a small example server gets built.
-
-This is the most simple Diamond server.
-
-More examples are located in the ./example directory.
-
-## CONFIG FILE
-
-Must be JSON encoded. Required fields are Addr and Socket. All other fields are optional.
-
-If not specified, diamond library will search for a config.json file in the working directory.
-
-With s.Config(b []byte) you can supply raw bytes,
-or s.ConfigPath(path string) you can supply a custom config path.
-
-        Name     string // user friendly name of server
-        Addr     string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
-        Socket   string // path of socket file to create (Example: /tmp/diamond.sock)
-        Level    int // Default Runlevel
-        Debug    bool // More verbose logs
-        Kicks    bool   // will kick another diamond to launch
-        Kickable bool   // able to be kicked by other diamonds
-        Log      string // directory to write logs (Can be a single dot)
-
-
-### example config.json with minimal recommended fields:
-        ```
-        {
-                "Name":"Diamonds! ⋄",
-                "Level":1,
-                "Addr":":8777",
-                "Socket":"/tmp/diamond.socket",
-                "Kicks": true,
-                "Kickable": true,
-        }
-
-        ```
-
-
-## build.sh
-
-Change directory to $GOPATH/src/github.com/aerth/diamond before using bin/build.sh
-
-```
-bin/build.sh admin
-bin/build.sh server
-bin/build.sh all # builds both
-```
 
 ## Reporting issues, Contributing
 
 Please submit a pull request if:
 
   * I forgot something
-  * You have an example for usage with a different http routing library
   * You have a bug fix
   * You have simplified the library, removed lines of code, etc
+  * You have an improvement
 
 Please submit a new github issue if:
 
