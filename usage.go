@@ -22,28 +22,28 @@ func init() {
 	// logfile as arg[1]
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		default://
+		default: //
 		case "-h", "--help":
-			println(``+
-`Diamond ⋄ Demo
+			println(`` +
+				`Diamond ⋄ Demo
 
 USAGE
-`+os.Args[0]+` [<logfile>]
+` + os.Args[0] + ` [<logfile>]
 
 
 EXAMPLES
 Output to d.log:
-`+os.Args[0]+` d.log
+` + os.Args[0] + ` d.log
 
 Output to /dev/stderr:
-`+os.Args[0]+`
+` + os.Args[0] + `
 `)
 			os.Exit(2)
 		}
 		file, err := os.OpenFile(os.Args[1], os.O_CREATE|os.O_APPEND|os.O_WRONLY, diamond.CHMODFILE)
 		if err != nil {
 			println(err.Error())
-			} else {
+		} else {
 			logfile = file
 		}
 	}

@@ -67,7 +67,7 @@ func TestNewServer(t *testing.T) {
 	s.Config.Addr = testAddr
 	println("starting first server")
 	s.Config.Name = t.Name()
-	s.ErrorLog.SetPrefix(t.Name()+": ")
+	s.ErrorLog.SetPrefix(t.Name() + ": ")
 	err := s.Start()
 	if err != nil {
 		t.Log(err.Error())
@@ -106,7 +106,7 @@ func TestNewServer(t *testing.T) {
 func TestRunlevel1(t *testing.T) {
 	s.Config.Level = 1
 	s.Config.Name = t.Name()
-	s.ErrorLog.SetPrefix(t.Name()+": ")
+	s.ErrorLog.SetPrefix(t.Name() + ": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
@@ -131,13 +131,12 @@ func TestRunlevel1(t *testing.T) {
 		println("Reply:", reply)
 	}
 
-
 }
 func TestRunlevel3(t *testing.T) {
 	s.Config.Name = t.Name()
 	s.Config.Level = 3
 	t.Log(s.Config.Level)
-	s.ErrorLog.SetPrefix(t.Name()+": ")
+	s.ErrorLog.SetPrefix(t.Name() + ": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
@@ -212,14 +211,17 @@ func TestClientCommands(t *testing.T) {
 		}
 
 		if strings.HasPrefix(reply, v.PassPrefix) {
-			if v.PassSuffix != "" { t.Logf("found prefix: %q", v.PassPrefix) }
+			if v.PassSuffix != "" {
+				t.Logf("found prefix: %q", v.PassPrefix)
+			}
 		} else {
 			t.Logf("expected prefix: \n%q, got: \n%q", v.PassPrefix, reply[:len(v.PassPrefix)])
 			t.FailNow()
 		}
 
 		if strings.HasSuffix(reply, v.PassSuffix) {
-			if v.PassSuffix != "" { t.Logf("found suffix: %q", v.PassSuffix)
+			if v.PassSuffix != "" {
+				t.Logf("found suffix: %q", v.PassSuffix)
 			}
 		} else {
 			t.Logf("expected \n%q, got \n%q", v.PassSuffix, reply[:len(v.PassSuffix)])
@@ -236,7 +238,7 @@ func TestKick(t *testing.T) {
 	s.Config.Socket = testSocket
 	s.Config.Name = t.Name()
 	s.Config.Kickable = true
-	s.ErrorLog.SetPrefix(t.Name()+": ")
+	s.ErrorLog.SetPrefix(t.Name() + ": ")
 	err := s.Start()
 	if err != nil {
 		t.Log(err.Error())
@@ -246,56 +248,55 @@ func TestKick(t *testing.T) {
 	defer func() {
 		s.Runlevel(0)
 		<-time.After(time.Second)
-		}()
+	}()
 
-		<-time.After(time.Second)
-		if err = up(); err != nil {
-			t.Log("Wanted server to be up, got down", err)
-			t.FailNow()
-			return
-		}
-
-		println("Testing KICK!")
-		reply, err := testClient.Send("KICK")
-		if reply != "OKAY" {
-			t.Logf("Wanted \"OKAY\", got %q\n", reply)
-			t.FailNow()
-			return
-		}
-		if err != nil {
-			t.Log("error:", err.Error())
-			t.FailNow()
-			return
-		}
-
-		t1 := time.Now()
-		for i := 0; i < 10; i++ {
-
-			<-time.After(300 * time.Millisecond)
-			 reply, err := stat()
-			 if err != nil {
-				 if err.Error() != "dial unix ./delete-me: connect: no such file or directory" {
-				 	t.Log(t.Name(), "failed:",err)
-					t.Fail()
-			 	}
-				 break
-			 }
-			 if reply != "" {
-				 t.Logf("Attempt %v, wanted server to be down, got: \n%s", i, reply)
-				 t.Fail()
-			 }
-			 t.Log(i)
-		}
-		t.Logf("Took %s to go down", time.Now().Sub(t1))
-		<-time.After(time.Second)
+	<-time.After(time.Second)
+	if err = up(); err != nil {
+		t.Log("Wanted server to be up, got down", err)
+		t.FailNow()
 		return
-
 	}
+
+	println("Testing KICK!")
+	reply, err := testClient.Send("KICK")
+	if reply != "OKAY" {
+		t.Logf("Wanted \"OKAY\", got %q\n", reply)
+		t.FailNow()
+		return
+	}
+	if err != nil {
+		t.Log("error:", err.Error())
+		t.FailNow()
+		return
+	}
+
+	t1 := time.Now()
+	for i := 0; i < 10; i++ {
+
+		<-time.After(300 * time.Millisecond)
+		reply, err := stat()
+		if err != nil {
+			if err.Error() != "dial unix ./delete-me: connect: no such file or directory" {
+				t.Log(t.Name(), "failed:", err)
+				t.Fail()
+			}
+			break
+		}
+		if reply != "" {
+			t.Logf("Attempt %v, wanted server to be down, got: \n%s", i, reply)
+			t.Fail()
+		}
+		t.Log(i)
+	}
+	t.Logf("Took %s to go down", time.Now().Sub(t1))
+	<-time.After(time.Second)
+	return
+
+}
 func TestUptime(t *testing.T) {
 	uptime = s.Uptime()
 	t.Logf("Testing took: %s", uptime.String())
 }
-
 
 func NoTestRedeploy(t *testing.T) {
 

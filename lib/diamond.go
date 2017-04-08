@@ -161,7 +161,7 @@ func (s *Server) Start() (err error) {
 		s.ErrorLog.SetFlags(log.Lshortfile)
 	}
 	getsocket := admin(s)
-	go once.Do(func(){
+	go once.Do(func() {
 		s.ErrorLog.Println("once")
 		// Socket listen timeout
 		go s.signalcatch()
@@ -175,7 +175,6 @@ func (s *Server) Start() (err error) {
 		s.ErrorLog.Println(err)
 		return err
 	}
-
 
 	go s.telcom() // launch telinit handler
 	if !s.socketed {

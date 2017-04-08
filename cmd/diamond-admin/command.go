@@ -45,9 +45,9 @@ var (
 )
 
 const (
-	cmdStatus = "status"
+	cmdStatus   = "status"
 	cmdRedeploy = "redeploy"
-	stderr    = "stderr"
+	stderr      = "stderr"
 )
 
 var (
@@ -81,14 +81,16 @@ func main() {
 
 		return
 	}
+
+	// no args, build cui
 	mm := buildWindow()
-		for {
-			if resp != "" {
-				msg += resp
-			}
-			if msg == "" {
-				msg = "Connected to: " + client.ServerName
-			}
+	for {
+		if resp != "" {
+			msg += resp
+		}
+		if msg == "" {
+			msg = "Connected to: " + client.ServerName
+		}
 
 		if msg != "" {
 			b := mm.GetScroller().Buffer.Bytes()
@@ -100,100 +102,99 @@ func main() {
 		// Reset messages each loop after setting message
 		msg = ""
 		resp = ""
-			buildMenu(mm)
-			mm.GetScroller().ScrollToEnd()
-			ev := handleKeyMouse(mm)
-			cmd := handleMenuInput(mm, ev)
-			if cmd == "quit" {
-				quit(mm)
-				return
-			}
-			resp, resperr = client.Send(cmd)
-			if resperr != nil {
-				mm.GetScreen().Fini()
-				println(resperr.Error())
-				os.Exit(111)
-			}
-			mm.GetScreen().Show()
+		buildMenu(mm)
+		mm.GetScroller().ScrollToEnd()
+		ev := handleKeyMouse(mm)
+		cmd := handleMenuInput(mm, ev)
+		if cmd == "quit" {
+			quit(mm)
+			return
 		}
-	}
-
-	func quit(mm *clix.MenuBar){
-		mm.GetScreen().Fini()
-		println("Check for updates often! https://github.com/aerth/diamond")
-	}
-
-	func buildWindow() *clix.MenuBar {
-		mm := clix.NewMenuBar(nil)
-		mm.SetMessage("⋄ DIAMOND CMD v0.2")
-		scrol := clix.NewScrollFrame("⋄")
-			mm.AttachScroller(scrol)
-			return mm
-	}
-func buildMenu(mm *clix.MenuBar){
-		mm.NewItem("Check Server Status") // status
-		mm.NewItem("Single User Mode")    // telinit 1
-		mm.NewItem("Multi User Mode")     // telinit 3
-		mm.NewItem("Redeploy Server")     // redeploy
-		mm.NewItem("Clear Buffer")        // save entire session to /tmp file
-		mm.NewItem("Save Buffer")         // save entire session to /tmp file
-		entry := clix.NewEntry(mm.GetScreen())
-		mm.AddEntry("Other", entry) // manual command
-		mm.NewItem("Quit Admin")
-	}
-
-func handleKeyMouse(mm *clix.MenuBar) *clix.EventHandler {
-		ev := clix.NewEventHandler()
-		ev.AddMenuBar(mm)
-		ev.Launch()
+		resp, resperr = client.Send(cmd)
+		if resperr != nil {
+			mm.GetScreen().Fini()
+			println(resperr.Error())
+			os.Exit(111)
+		}
 		mm.GetScreen().Show()
-		return ev
+	}
 }
 
+func quit(mm *clix.MenuBar) {
+	mm.GetScreen().Fini()
+	println("Check for updates often! https://github.com/aerth/diamond")
+}
+
+func buildWindow() *clix.MenuBar {
+	mm := clix.NewMenuBar(nil)
+	mm.SetMessage("⋄ DIAMOND CMD v0.2")
+	scrol := clix.NewScrollFrame("⋄")
+	mm.AttachScroller(scrol)
+	return mm
+}
+func buildMenu(mm *clix.MenuBar) {
+	mm.NewItem("Check Server Status") // status
+	mm.NewItem("Single User Mode")    // telinit 1
+	mm.NewItem("Multi User Mode")     // telinit 3
+	mm.NewItem("Redeploy Server")     // redeploy
+	mm.NewItem("Clear Buffer")        // save entire session to /tmp file
+	mm.NewItem("Save Buffer")         // save entire session to /tmp file
+	entry := clix.NewEntry(mm.GetScreen())
+	mm.AddEntry("Other", entry) // manual command
+	mm.NewItem("Quit Admin")
+}
+
+func handleKeyMouse(mm *clix.MenuBar) *clix.EventHandler {
+	ev := clix.NewEventHandler()
+	ev.AddMenuBar(mm)
+	ev.Launch()
+	mm.GetScreen().Show()
+	return ev
+}
 
 func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
-		select {
-		case <-time.After(*refreshtime):
+	select {
+	case <-time.After(*refreshtime):
 
+		cmd = cmdStatus
+
+	case c := <-ev.Output:
+		mm.GetScreen().Show()
+		switch c.(string) {
+		case "Quit Admin":
+			cmd = "quit"
+		case "Check Server Status":
 			cmd = cmdStatus
-
-		case c := <-ev.Output:
+		case "Single User Mode":
+			cmd = "telinit 1"
+		case "Multi User Mode":
+			cmd = "telinit 3"
+		case "Update Server":
+			cmd = "update"
+		case "Rebuild Server":
+			cmd = "rebuild"
+		case "Redeploy Server":
+			cmd = cmdRedeploy
+		case "Clear Buffer":
+			mm.GetScroller().Buffer.Truncate(0)
+			mm.GetScreen().Clear()
 			mm.GetScreen().Show()
-			switch c.(string) {
-			case "Quit Admin":
-				cmd = "quit"
-			case "Check Server Status":
-				cmd = cmdStatus
-			case "Single User Mode":
-				cmd = "telinit 1"
-			case "Multi User Mode":
-				cmd = "telinit 3"
-			case "Update Server":
-				cmd = "update"
-			case "Rebuild Server":
-				cmd = "rebuild"
-			case "Redeploy Server":
-				cmd = cmdRedeploy
-			case "Clear Buffer":
-				mm.GetScroller().Buffer.Truncate(0)
-				mm.GetScreen().Clear()
-				mm.GetScreen().Show()
-				cmd = ""
-			case "Save Buffer":
-				tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
-				if e == nil {
-					mm.GetScroller().Buffer.WriteTo(tmpfile)
-					resp = "Saved to:" + tmpfile.Name()
-				}
-				if e != nil {
-					resp = e.Error()
-				}
-			default:
-				cmd = c.(string)
+			cmd = ""
+		case "Save Buffer":
+			tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
+			if e == nil {
+				mm.GetScroller().Buffer.WriteTo(tmpfile)
+				resp = "Saved to:" + tmpfile.Name()
 			}
+			if e != nil {
+				resp = e.Error()
+			}
+		default:
+			cmd = c.(string)
 		}
+	}
 
-return cmd
+	return cmd
 }
 
 func notrunning() {
@@ -235,7 +236,7 @@ func buildClient() *diamond.Client {
 			println(rp)
 		}
 		if rerr != nil {
-			println(rerr)
+			println(rerr.Error())
 			os.Exit(222)
 		}
 		if rp == "" {
@@ -245,5 +246,5 @@ func buildClient() *diamond.Client {
 		os.Exit(0)
 	}
 
-return client
+	return client
 }

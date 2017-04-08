@@ -70,7 +70,6 @@ func Example() {
 	// }
 }
 
-
 // just for example to look good
 type dx struct{}
 

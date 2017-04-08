@@ -213,97 +213,97 @@ func (s *Server) socketAccept() error {
 }
 
 // Listen on s.Config.Socket for admin connections
-func admin(s *Server) (ch chan int){
-ch = make(chan int, 1)
+func admin(s *Server) (ch chan int) {
+	ch = make(chan int, 1)
 
-go func(){
-	var try = 0
-Okay:
-	if s.Config.Socket == "" {
-		s.ErrorLog.Println("please specify where to create socket")
-		s.Runlevel(0)
-		return
-	}
-	if s.Config.Debug {
-		s.ErrorLog.Println("SOCKET", s.Config.Socket)
-	}
-	addr, _ := net.ResolveUnixAddr("unix", s.Config.Socket)
-	r, e := net.DialUnix("unix", nil, addr)
-	if e != nil {
-		if strings.Contains(e.Error(), "no such") {
-			try++
-			if try > 2 {
-				s.ErrorLog.Println("FATAL", e)
-				s.Runlevel(0)
-				return
-			}
-		}
-
-		if !strings.Contains(e.Error(), "no such") {
-			try++
-			if try < 2 {
-				if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
-					s.ErrorLog.Printf("%s", e)
-				}
-				s.ErrorLog.Println("replacing stale socket")
-				os.Remove(s.Config.Socket)
-				goto Okay
-			}
-
-			s.ErrorLog.Printf("%s", e)
-			s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.Config.Socket)
-			s.ErrorLog.Printf("You may safely delete it if there are no running Diamond processes.")
-
+	go func() {
+		var try = 0
+	Okay:
+		if s.Config.Socket == "" {
+			s.ErrorLog.Println("please specify where to create socket")
 			s.Runlevel(0)
-			return
-		}
-	} else {
-
-		s.ErrorLog.Print("Socket exists:" + r.RemoteAddr().String())
-
-		// There is a running Diamond instance.
-		if s.Config.Kicks { // We are kicking
-			out := s.Kick()
-			if out == "OKAY" || out == "unexpected EOF" {
-				s.ErrorLog.Print("Kicked a diamond")
-				<-time.After(100 * time.Millisecond)
-				goto Okay
-			}
-			s.ErrorLog.Println("There is already a running server with socket: " +
-				s.Config.Socket + ". We tried kicking, but it replied with: " + out)
-			s.Runlevel(0)
-			return
-		}
-		s.ErrorLog.Println("There is already a running server with socket: " +
-			s.Config.Socket +
-			". If you want to replace it, use {\"Kick\": true} in Config.")
-		return
-
-	}
-
-	e = s.socketListen(s.Config.Socket)
-	if e != nil {
-		s.ErrorLog.Println("eek:", e)
-		s.Runlevel(0)
-		return
-	}
-	s.socketed = true
-	ch <- 1
-	// We are listening on a UNIX socket
-	for {
-		e = s.socketAccept()
-		if e != nil {
-			s.ErrorLog.Printf("SOCKET %s", e.Error())
 			return
 		}
 		if s.Config.Debug {
-			s.ErrorLog.Printf("Socket Connection: %s", time.Now().Format(time.Kitchen))
+			s.ErrorLog.Println("SOCKET", s.Config.Socket)
+		}
+		addr, _ := net.ResolveUnixAddr("unix", s.Config.Socket)
+		r, e := net.DialUnix("unix", nil, addr)
+		if e != nil {
+			if strings.Contains(e.Error(), "no such") {
+				try++
+				if try > 2 {
+					s.ErrorLog.Println("FATAL", e)
+					s.Runlevel(0)
+					return
+				}
+			}
+
+			if !strings.Contains(e.Error(), "no such") {
+				try++
+				if try < 2 {
+					if e.Error() != "dial unix "+s.Config.Socket+": connect: connection refused" {
+						s.ErrorLog.Printf("%s", e)
+					}
+					s.ErrorLog.Println("replacing stale socket")
+					os.Remove(s.Config.Socket)
+					goto Okay
+				}
+
+				s.ErrorLog.Printf("%s", e)
+				s.ErrorLog.Printf("** WARNING ** Socket exists: %q", s.Config.Socket)
+				s.ErrorLog.Printf("You may safely delete it if there are no running Diamond processes.")
+
+				s.Runlevel(0)
+				return
+			}
+		} else {
+
+			s.ErrorLog.Print("Socket exists:" + r.RemoteAddr().String())
+
+			// There is a running Diamond instance.
+			if s.Config.Kicks { // We are kicking
+				out := s.Kick()
+				if out == "OKAY" || out == "unexpected EOF" {
+					s.ErrorLog.Print("Kicked a diamond")
+					<-time.After(100 * time.Millisecond)
+					goto Okay
+				}
+				s.ErrorLog.Println("There is already a running server with socket: " +
+					s.Config.Socket + ". We tried kicking, but it replied with: " + out)
+				s.Runlevel(0)
+				return
+			}
+			s.ErrorLog.Println("There is already a running server with socket: " +
+				s.Config.Socket +
+				". If you want to replace it, use {\"Kick\": true} in Config.")
+			return
+
 		}
 
-	}
-}()
+		e = s.socketListen(s.Config.Socket)
+		if e != nil {
+			s.ErrorLog.Println("eek:", e)
+			s.Runlevel(0)
+			return
+		}
+		s.socketed = true
+		ch <- 1
+		// We are listening on a UNIX socket
+		for {
+			e = s.socketAccept()
+			if e != nil {
+				s.ErrorLog.Printf("SOCKET %s", e.Error())
+				return
+			}
+			if s.Config.Debug {
+				s.ErrorLog.Printf("Socket Connection: %s", time.Now().Format(time.Kitchen))
+			}
 
-return ch
+		}
+	}()
+
+	return ch
 }
 
 func (s *Server) telcom() {
