@@ -31,8 +31,6 @@ import (
 )
 
 var (
-	version = "0.6"
-
 	// CHMODDIR default permissions for directory create
 	CHMODDIR os.FileMode = 0750
 

@@ -189,7 +189,7 @@ type teststruct struct {
 
 func TestClientCommands(t *testing.T) {
 	s.Config.Level = 1
-	s.Config.Name = "Diamond ⋄ 0.5"
+	s.Config.Name = "Diamond ⋄ 0.6"
 	s.Config.Addr = testAddr
 	s.ErrorLog.SetPrefix("TestSocket: ")
 	s.Config.Socket = testSocket

@@ -85,19 +85,20 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	switch {
 
 	// telinit
-	case strings.HasPrefix(args, "telinit "):
-		if args == "telinit 1" {
-			p.parent.telinit <- 1
-		} else if args == "telinit 3" {
-			p.parent.telinit <- 3
-		} else if args == "telinit 4" {
-			p.parent.telinit <- 4
-		} else if args == "telinit 0" {
-			p.parent.telinit <- 0
-		}
+	case args == "telinit 0":
+		p.parent.telinit <- 0
 		*reply = "DONE"
-
+	case args == "telinit 1":
+		p.parent.telinit <- 1
+		*reply = "DONE"
+	case args == "telinit 3":
+		p.parent.telinit <- 3
+		*reply = "DONE"
+	case args == "telinit 4":
+		p.parent.telinit <- 4
+		*reply = "DONE"
 	// hello
+
 	case strings.HasPrefix(args, "HELLO from "):
 		p.parent.ErrorLog.Println(args)
 		*reply = "HELLO from " + p.parent.Config.Name
@@ -176,8 +177,8 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 	}
 
 	if p.parent.Config.Debug {
-		p.parent.ErrorLog.Printf(" CMD: %s", args)
-		p.parent.ErrorLog.Printf("REPL: %s", *reply)
+		p.parent.ErrorLog.Printf("  CMD: %s", args)
+		p.parent.ErrorLog.Printf("REPLY: %s", *reply)
 	}
 	if *reply == "" {
 		*reply = fmt.Sprintf("Command not found: %s", args)

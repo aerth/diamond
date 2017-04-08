@@ -54,7 +54,7 @@ func main() {
 	// wait for quitchan
 	for {
 		select {
-		case <-time.After(10 * time.Second):
+		case <-time.After(100 * time.Second):
 			println("[demo]", "Status:\n", d.Status())
 		case cya := <-quitchan:
 			println("[demo]", cya)

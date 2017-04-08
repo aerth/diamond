@@ -25,7 +25,20 @@
 // Package diamond adds runlevels to a web application
 /*
 
- Using the diamond library is simple. See examples:
+	0 is off
+
+	1 is single user
+
+	3 is multiuser, opening tcp listener(s)
+
+Assuming your http.Handler is named mux, this is how to create a new diamond server:
+
+	s := diamond.NewServer(mux)
+
+Before starting the server, it should be configured. See /config.go
+
+
+
 */
 package diamond
 
@@ -43,9 +56,11 @@ import (
 	"time"
 )
 
+var version = "0.6"
+
 // Server runlevels
 //
-//   0 = halt (NOT os.Exit(0), call that yourself)
+//   0 = halt (NOT os.Exit(0), call that yourself after s.Done is sent)
 //
 //   1 = single user mode (default) kills listenerTCPs
 //
