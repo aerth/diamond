@@ -27,7 +27,7 @@
 
 	0 is off
 
-	1 is single user
+	1 is single user, using a unix socket for admin commands
 
 	3 is multiuser, opening tcp listener(s)
 
