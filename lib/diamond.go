@@ -195,7 +195,6 @@ func (s *Server) signalcatch() {
 	if !s.signal {
 		return
 	}
-	s.ErrorLog.Println("Catching signal")
 	quitchan := make(chan os.Signal, 1)
 	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
 	sig := <-quitchan

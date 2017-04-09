@@ -33,6 +33,9 @@ import (
 )
 
 var (
+
+	// Debug = true for verbose connection logging
+	Debug bool
 	// could be improved? let me know!
 	preferredCipherSuites = []uint16{
 		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
@@ -135,8 +138,8 @@ func (s *Server) serveHTTP() {
 // ConnState closes idle connections, while counting  active connections
 // so they don't hang open while switching to runlevel 1
 func (s *Server) connState(c net.Conn, state http.ConnState) {
-	if s.Config.Debug {
-		s.ErrorLog.Println(state, c)
+	if Debug {
+		s.ErrorLog.Println(state, c.LocalAddr(), c.RemoteAddr())
 	}
 	switch state {
 	case http.StateActive: // increment counters
