@@ -62,6 +62,7 @@ d := diamond.NewServer(nil)
 d.ErrorLog.SetOutput(mylogfile)
 d.SetMux(myrouter)
 d.Start()
+println(<-s.Done)
 
 ```
 

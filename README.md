@@ -20,6 +20,17 @@ Command: telinit 3
 DONE: telinit 3
 ```
 
+## Using the library
+
+```
+d := diamond.NewServer(nil)
+d.ErrorLog.SetOutput(mylogfile)
+d.SetMux(myrouter)
+d.Start()
+println(<-s.Done)
+
+```
+
 Read more:
 
 [aerth.github.io/diamond](https://aerth.github.io/diamond/)
