@@ -162,7 +162,7 @@ func (s *Server) Start() (err error) {
 	}
 	getsocket := admin(s)
 	go once.Do(func() {
-		 // Socket listen timeout
+		// Socket listen timeout
 		go s.signalcatch()
 	})
 

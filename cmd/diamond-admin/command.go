@@ -52,8 +52,8 @@ const (
 )
 
 var (
-	//msg, resp string // to display in the Entry screen
-	//resperr   error
+//msg, resp string // to display in the Entry screen
+//resperr   error
 )
 
 func init() {
@@ -102,18 +102,18 @@ func buildWindow() *clix.MenuBar {
 func buildMenu(mm *clix.MenuBar) {
 	mm.NewItem("Check Server Status") // status
 	mm.NewItem("Clear Buffer")        // save entire session to /tmp file
-	mm.NewItem("Toggle` Buffer")        // save entire session to /tmp file
+	mm.NewItem("Toggle` Buffer")      // save entire session to /tmp file
 	mm.NewItem("Save Buffer")         // save entire session to /tmp file
 	entry := clix.NewEntry(mm.GetScreen())
 	mm.AddEntry("Other", entry) // manual command
 	mm.NewItem("Quit Admin")
 	mm2 := clix.NewMenuBar(mm.GetScreen())
 	mm2.NewItem("help")
-	mm2.NewItem("Single User Mode")    // telinit 1
-	mm2.NewItem("Multi User Mode")     // telinit 3
-	mm2.NewItem("Redeploy Server")     // redeploy
-	mm2.NewItem("Clear Buffer")        // save entire session to /tmp file
-	mm2.NewItem("Save Buffer")         // save entire session to /tmp file
+	mm2.NewItem("Single User Mode") // telinit 1
+	mm2.NewItem("Multi User Mode")  // telinit 3
+	mm2.NewItem("Redeploy Server")  // redeploy
+	mm2.NewItem("Clear Buffer")     // save entire session to /tmp file
+	mm2.NewItem("Save Buffer")      // save entire session to /tmp file
 	mm.AddSibling(mm2)
 
 }
@@ -222,6 +222,7 @@ func buildClient() *diamond.Client {
 
 	return client
 }
+
 var buf = new(bytes.Buffer)
 var bbuf = new(bytes.Buffer)
 
@@ -250,9 +251,9 @@ func doCUI(socketpath string) {
 			return
 		}
 		if cmd != "" {
-		buf.WriteString("SENT: "+cmd)
-		msg, resperr = client.Send(cmd)
-		buf.WriteString("REPLY: "+msg+"\n")
+			buf.WriteString("SENT: " + cmd)
+			msg, resperr = client.Send(cmd)
+			buf.WriteString("REPLY: " + msg + "\n")
 			if resperr != nil {
 				mm.GetScreen().Fini()
 				println(resperr.Error())
