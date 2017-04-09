@@ -93,7 +93,6 @@ func (s *Server) Status() string {
 	out += fmt.Sprintf("Current Runlevel: %v\n", s.level)
 	str := listnstr(s.level)
 	s.levellock.Unlock()
-	out += fmt.Sprintf("Socket: %s\n", s.Config.Socket)
 	out += fmt.Sprintf("Addr: %s (%s)\n", s.Config.Addr, str)
 	out += fmt.Sprintf("Uptime: %s\n", time.Since(s.since))
 	out += fmt.Sprintf("Recent Connections: %v\n", s.counters.Uint64("active"))
