@@ -23,11 +23,15 @@ DONE: telinit 3
 ## Using the library
 
 ```
-d := diamond.NewServer(nil)
-d.ErrorLog.SetOutput(mylogfile)
-d.SetMux(myrouter)
+package main
+import "github.com/aerth/diamond/lib"
+import "net/http"
+func main(){
+router := http.FileServer(http.Dir("."))
+d := diamond.NewServer(router)
 d.Start()
-println(<-s.Done)
+println(<-d.Done)
+}
 
 ```
 
