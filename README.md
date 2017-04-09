@@ -21,7 +21,10 @@ DONE: telinit 3
 ```
 
 Read more:
+
 [aerth.github.io/diamond](https://aerth.github.io/diamond/)
+
+[github.com/aerth/diamond](https://github.com/aerth/diamond/)
 
 #### CAUTION
 
