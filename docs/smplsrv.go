@@ -17,6 +17,10 @@ func main() {
     println("usage: smplsrv <filename>")
     return
   }
+  port := ":8033"
+  if os.Getenv("PORT") != "" {
+    port = os.Getenv("PORT")
+  }
 
   filebytes, _ := ioutil.ReadFile(os.Args[1])
 	mux := http.HandlerFunc(
@@ -26,7 +30,10 @@ func main() {
 		},
 	)
 	s := diamond.NewServer(mux)
-	s.Config.Addr = ":8033"
-	s.Start()
+	s.Config.Addr = port
+	err := s.Start()
+  if err != nil {
+    println(err.Error())
+  }
 	println(<-s.Done)
 }
