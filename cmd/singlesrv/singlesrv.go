@@ -1,7 +1,8 @@
-// serve files from single directory
+// serve single file
 package main
 
 import (
+	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -9,15 +10,26 @@ import (
 )
 
 var mux http.Handler
-var port = ":8034"
-var socket = os.TempDir() + "/smplsrv.sock"
+var port = ":8033"
+var socket = os.TempDir() + "/singlesrv.sock"
 
 func init() {
 	if len(os.Args) < 2 {
-		println("fatal: need filesystem to serve")
-		println("usage: smplsrv <directory>")
+		println("fatal: need file to serve")
+		println("usage: singlesrv <filename>")
 		return
 	}
+
+	filebytes, err := ioutil.ReadFile(os.Args[1])
+	if err != nil {
+		filebytes = []byte(err.Error())
+	}
+	mux = http.HandlerFunc(
+		/* HandlerFunc */
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write(filebytes)
+		},
+	)
 }
 
 func main() {
@@ -27,7 +39,6 @@ func main() {
 	if os.Getenv("SOCKET") != "" {
 		socket = os.Getenv("SOCKET")
 	}
-	mux = http.FileServer(http.Dir(os.Args[1]))
 	s := diamond.NewServer(mux)
 	s.Config.Addr = port
 	err := s.Start()
