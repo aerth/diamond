@@ -26,6 +26,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -51,8 +52,8 @@ const (
 )
 
 var (
-	msg, resp string // to display in the Entry screen
-	resperr   error
+	//msg, resp string // to display in the Entry screen
+	//resperr   error
 )
 
 func init() {
@@ -69,8 +70,8 @@ func main() {
 	if *sock != "" {
 		socketpath = *sock
 	}
-	client := buildClient()
 	if len(flag.Args()) > 1 {
+		client := buildClient()
 		reply, err := client.Send(strings.Join(flag.Args()[1:], " "))
 		if err != nil {
 			println(err.Error())
@@ -82,42 +83,7 @@ func main() {
 		return
 	}
 
-	// no args, build cui
-	mm := buildWindow()
-	for {
-		if resp != "" {
-			msg += resp
-		}
-		if msg == "" {
-			msg = "Connected to: " + client.ServerName
-		}
-
-		if msg != "" {
-			b := mm.GetScroller().Buffer.Bytes()
-			mm.GetScroller().Buffer.Truncate(0)
-			mm.GetScroller().Buffer.WriteString(msg)
-			mm.GetScroller().Buffer.WriteString("\n\n")
-			mm.GetScroller().Buffer.Write(b)
-		}
-		// Reset messages each loop after setting message
-		msg = ""
-		resp = ""
-		buildMenu(mm)
-		mm.GetScroller().ScrollToEnd()
-		ev := handleKeyMouse(mm)
-		cmd := handleMenuInput(mm, ev)
-		if cmd == "quit" {
-			quit(mm)
-			return
-		}
-		resp, resperr = client.Send(cmd)
-		if resperr != nil {
-			mm.GetScreen().Fini()
-			println(resperr.Error())
-			os.Exit(111)
-		}
-		mm.GetScreen().Show()
-	}
+	doCUI(socketpath)
 }
 
 func quit(mm *clix.MenuBar) {
@@ -132,16 +98,24 @@ func buildWindow() *clix.MenuBar {
 	mm.AttachScroller(scrol)
 	return mm
 }
+
 func buildMenu(mm *clix.MenuBar) {
 	mm.NewItem("Check Server Status") // status
-	mm.NewItem("Single User Mode")    // telinit 1
-	mm.NewItem("Multi User Mode")     // telinit 3
-	mm.NewItem("Redeploy Server")     // redeploy
 	mm.NewItem("Clear Buffer")        // save entire session to /tmp file
+	mm.NewItem("Toggle` Buffer")        // save entire session to /tmp file
 	mm.NewItem("Save Buffer")         // save entire session to /tmp file
 	entry := clix.NewEntry(mm.GetScreen())
 	mm.AddEntry("Other", entry) // manual command
 	mm.NewItem("Quit Admin")
+	mm2 := clix.NewMenuBar(mm.GetScreen())
+	mm2.NewItem("help")
+	mm2.NewItem("Single User Mode")    // telinit 1
+	mm2.NewItem("Multi User Mode")     // telinit 3
+	mm2.NewItem("Redeploy Server")     // redeploy
+	mm2.NewItem("Clear Buffer")        // save entire session to /tmp file
+	mm2.NewItem("Save Buffer")         // save entire session to /tmp file
+	mm.AddSibling(mm2)
+
 }
 
 func handleKeyMouse(mm *clix.MenuBar) *clix.EventHandler {
@@ -151,13 +125,10 @@ func handleKeyMouse(mm *clix.MenuBar) *clix.EventHandler {
 	mm.GetScreen().Show()
 	return ev
 }
-
 func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
 	select {
 	case <-time.After(*refreshtime):
-
 		cmd = cmdStatus
-
 	case c := <-ev.Output:
 		mm.GetScreen().Show()
 		switch c.(string) {
@@ -175,6 +146,9 @@ func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
 			cmd = "rebuild"
 		case "Redeploy Server":
 			cmd = cmdRedeploy
+		case "Toggle Buffer":
+			bbuf = mm.GetScroller().Buffer
+			mm.GetScroller().Buffer = buf
 		case "Clear Buffer":
 			mm.GetScroller().Buffer.Truncate(0)
 			mm.GetScreen().Clear()
@@ -184,10 +158,10 @@ func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
 			tmpfile, e := ioutil.TempFile(os.TempDir(), "/diamond.log.")
 			if e == nil {
 				mm.GetScroller().Buffer.WriteTo(tmpfile)
-				resp = "Saved to:" + tmpfile.Name()
+				mm.GetScroller().Buffer.WriteString("Saved to:" + tmpfile.Name())
 			}
 			if e != nil {
-				resp = e.Error()
+				mm.GetScroller().Buffer.WriteString(e.Error())
 			}
 		default:
 			cmd = c.(string)
@@ -247,4 +221,45 @@ func buildClient() *diamond.Client {
 	}
 
 	return client
+}
+var buf = new(bytes.Buffer)
+var bbuf = new(bytes.Buffer)
+
+func doCUI(socketpath string) {
+	client := buildClient()
+	mm := buildWindow()
+	buildMenu(mm)
+	var msg string
+	var resperr error
+	for {
+		if msg == "" {
+			msg = "Connected to: " + client.ServerName
+		}
+		if msg != "" {
+			mm.GetScroller().Buffer.Truncate(0)
+			mm.GetScroller().Buffer.WriteString(msg)
+			mm.GetScroller().Buffer.WriteString("\n")
+		}
+		// Reset messages each loop after setting message
+		mm.GetScroller().ScrollToEnd()
+		ev := handleKeyMouse(mm)
+		cmd := handleMenuInput(mm, ev)
+
+		if cmd == "quit" {
+			quit(mm)
+			return
+		}
+		if cmd != "" {
+		buf.WriteString("SENT: "+cmd)
+		msg, resperr = client.Send(cmd)
+		buf.WriteString("REPLY: "+msg+"\n")
+			if resperr != nil {
+				mm.GetScreen().Fini()
+				println(resperr.Error())
+				os.Exit(111)
+			}
+		}
+		mm.GetScreen().Show()
+	}
+
 }
