@@ -23,6 +23,8 @@ DONE: telinit 3
 
 ## Using the library
 
+Diamond requires Go 1.8
+
 ```
 package main
 import "github.com/aerth/diamond/lib"
