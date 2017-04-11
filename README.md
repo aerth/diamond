@@ -5,6 +5,7 @@
  :zap: ```telinit 4```
 
 [![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
+[![Build Status](https://travis-ci.org/aerth/diamond.svg?branch=master)](https://travis-ci.org/aerth/diamond)
 
 ![Screenshot diamond-admin CUI](https://github.com/aerth/diamond/blob/master/docs/diamond-screenshot.png?raw=true)
 
