@@ -25,8 +25,6 @@
 package diamond
 
 import (
-	"fmt"
-	"os"
 	"strconv"
 	"time"
 )
@@ -78,37 +76,6 @@ func (s *Server) Level() int {
 // String returns diamond version
 func (s *Server) String() string {
 	return version
-}
-
-// Status returns a status report string
-func (s *Server) Status() string {
-	if s == nil {
-		return ""
-	}
-	var out string
-	out += fmt.Sprintf("Server Name: %s\n", s.Config.Name)
-	out += fmt.Sprintf("Diamond Version: %s\n", version)
-	out += fmt.Sprintf("Default Runlevel: %v\n", s.Config.Level)
-	s.levellock.Lock()
-	out += fmt.Sprintf("Current Runlevel: %v\n", s.level)
-	str := listnstr(s.level)
-	s.levellock.Unlock()
-	out += fmt.Sprintf("Addr: %s (%s)\n", s.Config.Addr, str)
-	out += fmt.Sprintf("Uptime: %s\n", time.Since(s.since))
-	out += fmt.Sprintf("Recent Connections: %v\n", s.counters.Uint64("active"))
-	out += fmt.Sprintf("Total Connections: %v\n", s.counters.Uint64("total"))
-	if s.Config.Debug {
-		out += fmt.Sprintf("Debug: %v\n", s.Config.Debug)
-		wd, _ := os.Getwd()
-		if wd != "" {
-			out += fmt.Sprintf("Working Directory: %s\n", wd)
-		}
-		exe, _ := os.Executable()
-		if exe != "" {
-			out += fmt.Sprintf("Executable: %s", exe)
-		}
-	}
-	return out
 }
 
 // Uptime returns duration since server creation
