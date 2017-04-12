@@ -55,7 +55,7 @@ func main() {
 		w.Write([]byte(d.Status()))
 	}))
 	d.Config.Name = "Diamond Demo ⋄"
-	d.ErrorLog.SetOutput(logfile)
+	d.ErrorLog = log.New(os.Stderr, "⋄ ", log.Ltime)
 	println("[demo] logging to", logfile.Name())
 	println("[demo]", d.Config.Name)
 	d.Config.Addr = ":8777"
