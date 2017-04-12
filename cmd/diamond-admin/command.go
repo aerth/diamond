@@ -102,7 +102,7 @@ func buildWindow() *clix.MenuBar {
 func buildMenu(mm *clix.MenuBar) {
 	mm.NewItem("Check Server Status") // status
 	mm.NewItem("Clear Buffer")        // save entire session to /tmp file
-	mm.NewItem("Toggle` Buffer")      // save entire session to /tmp file
+	mm.NewItem("Toggle Buffer")      // save entire session to /tmp file
 	mm.NewItem("Save Buffer")         // save entire session to /tmp file
 	entry := clix.NewEntry(mm.GetScreen())
 	mm.AddEntry("Other", entry) // manual command
