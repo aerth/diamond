@@ -66,8 +66,8 @@ func TestNewServer(t *testing.T) {
 	s.Config.Socket = testSocket
 	s.Config.Addr = testAddr
 	println("starting first server")
-	s.Config.Name = t.Name()
-	s.ErrorLog.SetPrefix(t.Name() + ": ")
+	s.Config.Name = "NewServer"
+	s.ErrorLog.SetPrefix("NewServer" + ": ")
 	err := s.Start()
 	if err != nil {
 		t.Log(err.Error())
@@ -99,14 +99,14 @@ func TestNewServer(t *testing.T) {
 		return
 	}
 
-	t.Log(t.Name(), "Passed")
+	t.Log("NewServer", "Passed")
 
 }
 
 func TestRunlevel1(t *testing.T) {
 	s.Config.Level = 1
-	s.Config.Name = t.Name()
-	s.ErrorLog.SetPrefix(t.Name() + ": ")
+	s.Config.Name = "Runlevel 1"
+	s.ErrorLog.SetPrefix("Runlevel 1" + ": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
@@ -133,10 +133,10 @@ func TestRunlevel1(t *testing.T) {
 
 }
 func TestRunlevel3(t *testing.T) {
-	s.Config.Name = t.Name()
+	s.Config.Name = "Runlevel 1"
 	s.Config.Level = 3
 	t.Log(s.Config.Level)
-	s.ErrorLog.SetPrefix(t.Name() + ": ")
+	s.ErrorLog.SetPrefix("Runlevel 1" + ": ")
 	s.Config.Addr = testAddr
 	s.Config.Socket = testSocket
 	err := s.Start()
@@ -236,9 +236,9 @@ var uptime time.Duration
 func TestKick(t *testing.T) {
 	println("starting test kick")
 	s.Config.Socket = testSocket
-	s.Config.Name = t.Name()
+	s.Config.Name = "Runlevel 1"
 	s.Config.Kickable = true
-	s.ErrorLog.SetPrefix(t.Name() + ": ")
+	s.ErrorLog.SetPrefix("Runlevel 1" + ": ")
 	err := s.Start()
 	if err != nil {
 		t.Log(err.Error())
@@ -277,7 +277,7 @@ func TestKick(t *testing.T) {
 		reply, err := stat()
 		if err != nil {
 			if err.Error() != "dial unix ./delete-me: connect: no such file or directory" {
-				t.Log(t.Name(), "failed:", err)
+				t.Log("Test Kick", "failed:", err)
 				t.Fail()
 			}
 			break
