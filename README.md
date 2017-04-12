@@ -23,7 +23,7 @@ DONE: telinit 3
 
 ## Using the library
 
-Diamond requires Go 1.8
+Diamond requires Go 1.6.4 or newer
 
 ```
 package main
