@@ -17,7 +17,8 @@ func init() {
 	if len(os.Args) < 2 {
 		println("fatal: need file to serve")
 		println("usage: singlesrv <filename>")
-		return
+		println("example: env PORT=0.0.0.0:8080 singlesrv index.html")
+		os.Exit(111)
 	}
 
 	filebytes, err := ioutil.ReadFile(os.Args[1])
