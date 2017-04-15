@@ -16,7 +16,9 @@ func init() {
 	if len(os.Args) < 2 {
 		println("fatal: need filesystem to serve")
 		println("usage: smplsrv <directory>")
-		return
+		println("set PORT variable to specify port")
+		println("'env PORT=0.0.0.0:8034 smplsrv .'")
+		os.Exit(111)
 	}
 }
 
