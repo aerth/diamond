@@ -186,7 +186,9 @@ func (s *Server) Start() (err error) {
 	 * WARNING: No os.Exit() beyond this point
 	 * Use s.Runlevel(0)
 	 */
-
+	if s.Config.Level == 0 {
+		s.Config.Level = 1
+	}
 	s.telinit <- s.Config.Level // go to default runlevel
 	return nil                  // no errors
 }
