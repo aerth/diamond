@@ -146,7 +146,11 @@ func (p *rpcpacket) Command(args string, reply *string) error {
 
 	// redeploy
 	case args == "redeploy":
-		*reply = "Redeploying ⋄"
+		if p.parent.Config.Kickable == false {
+			*reply = "not kickable, not redeploying"
+			break
+		}
+		*reply += "Redeploying ⋄"
 		p.parent.respawn()
 		p.parent.Runlevel(0)
 
