@@ -137,9 +137,12 @@ func (s *Server) serveHTTP() {
 				s.ErrorLog.Println(err)
 				return
 			}
+			s.listenerUnix = ulistener
 			e := s.Server.Serve(ulistener)
 			if e != nil {
-				s.ErrorLog.Println(err)
+				if !strings.Contains(e.Error(), "use of closed") {
+					s.ErrorLog.Println(e)
+				}
 			}
 		}()
 	}
