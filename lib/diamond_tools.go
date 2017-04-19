@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"os"
 )
 
 var (
@@ -119,6 +120,8 @@ func (s *Server) serveHTTP() {
 			s.ErrorLog.Println("Listening Unix:,", s.Config.SocketHTTP)
 			defer s.ErrorLog.Println("Stopped Unix listener:", s.Config.SocketHTTP)
 			address := s.Config.SocketHTTP
+			defer os.Remove(address)
+			ServeUnix:
 			// Look up address
 			socketAddress, err := net.ResolveUnixAddr("unix", address)
 			if err != nil {
@@ -127,6 +130,10 @@ func (s *Server) serveHTTP() {
 			}
 			ulistener, err := net.ListenUnix("unix", socketAddress)
 			if err != nil {
+				if strings.Contains(err.Error(), "already in use") {
+					os.Remove(address)
+					goto ServeUnix
+				}
 				s.ErrorLog.Println(err)
 				return
 			}
