@@ -463,6 +463,14 @@ func (s *Server) runlevel6() {
 
 	// disallow new multiuser connections
 
+	if s.listenerUnix != nil {
+		e := s.listenerUnix.Close()
+		if e != nil {
+			s.ErrorLog.Println(e)
+		}
+	}
+
+
 	if s.listenerTCP != nil {
 		s.ErrorLog.Printf("Closing TCP listener: %s", s.Config.Addr)
 		e := s.listenerTCP.Close()

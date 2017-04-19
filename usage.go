@@ -60,6 +60,7 @@ func main() {
 	println("[demo]", d.Config.Name)
 	d.Config.Addr = ":8777"
 	d.Config.Socket = "./diamond.sock"
+	d.Config.SocketHTTP = "./diamond-web.sock"
 	d.Config.Level = 1 // in three seconds we will switch gears
 	d.Config.Debug = true
 	d.ErrorLog.SetFlags(log.Lshortfile)

@@ -101,7 +101,7 @@ type Server struct {
 	// TCP Listener that can be stopped
 	listenerTCP net.Listener
 	listenerTLS net.Listener
-
+	listenerUnix net.Listener
 	counters mucount // concurrent map
 
 	signal bool // handle signals like SIGTERM gracefully
