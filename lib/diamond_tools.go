@@ -28,9 +28,9 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
-	"os"
 )
 
 var (
@@ -121,7 +121,7 @@ func (s *Server) serveHTTP() {
 			defer s.ErrorLog.Println("Stopped Unix listener:", s.Config.SocketHTTP)
 			address := s.Config.SocketHTTP
 			defer os.Remove(address)
-			ServeUnix:
+		ServeUnix:
 			// Look up address
 			socketAddress, err := net.ResolveUnixAddr("unix", address)
 			if err != nil {
