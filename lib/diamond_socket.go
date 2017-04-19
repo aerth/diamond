@@ -470,7 +470,6 @@ func (s *Server) runlevel6() {
 		}
 	}
 
-
 	if s.listenerTCP != nil {
 		s.ErrorLog.Printf("Closing TCP listener: %s", s.Config.Addr)
 		e := s.listenerTCP.Close()

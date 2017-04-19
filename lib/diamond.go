@@ -99,10 +99,10 @@ type Server struct {
 	customCommander func(args string, reply *string) error
 
 	// TCP Listener that can be stopped
-	listenerTCP net.Listener
-	listenerTLS net.Listener
+	listenerTCP  net.Listener
+	listenerTLS  net.Listener
 	listenerUnix net.Listener
-	counters mucount // concurrent map
+	counters     mucount // concurrent map
 
 	signal bool // handle signals like SIGTERM gracefully
 

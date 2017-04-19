@@ -27,7 +27,6 @@ package diamond
 import (
 	"crypto/tls"
 	"net"
-	"os"
 	"net/http"
 	"strings"
 	"time"
@@ -116,24 +115,25 @@ func (s *Server) serveHTTP() {
 	}
 
 	if s.Config.SocketHTTP != "" {
-		go func(){
-		s.ErrorLog.Println("Listening Unix:,", s.Config.SocketHTTP)
-		address := s.Config.SocketHTTP
-	    os.Remove(address)
-	    // Look up address
-		socketAddress, err := net.ResolveUnixAddr("unix", address)
-		if err != nil {
-			s.ErrorLog.Println(err)
-		}
-		ulistener, err := net.ListenUnix("unix", socketAddress)
-		if err != nil {
-					s.ErrorLog.Println(err)
-		}		
-		e := s.Server.Serve(ulistener)
-		if e != nil {
-			s.ErrorLog.Println(err)
-		}
-		s.ErrorLog.Println("Stopped Unix listener:", socketAddress)
+		go func() {
+			s.ErrorLog.Println("Listening Unix:,", s.Config.SocketHTTP)
+			defer s.ErrorLog.Println("Stopped Unix listener:", s.Config.SocketHTTP)
+			address := s.Config.SocketHTTP
+			// Look up address
+			socketAddress, err := net.ResolveUnixAddr("unix", address)
+			if err != nil {
+				s.ErrorLog.Println(err)
+				return
+			}
+			ulistener, err := net.ListenUnix("unix", socketAddress)
+			if err != nil {
+				s.ErrorLog.Println(err)
+				return
+			}
+			e := s.Server.Serve(ulistener)
+			if e != nil {
+				s.ErrorLog.Println(err)
+			}
 		}()
 	}
 

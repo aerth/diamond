@@ -43,7 +43,7 @@ type ConfigFields struct {
 	Name        string // user friendly name
 	Addr        string // :8080 (Short for 0.0.0.0:8080) or 127.0.0.1:8080 (Only localhost)
 	Socket      string // path of Socket file to create (/tmp/diamond.sock)
-	SocketHTTP string // if nonempty, listen on unix socket
+	SocketHTTP  string // if nonempty, listen on unix socket
 	Level       int
 	Debug       bool
 	Kicks       bool // will kick to launch
