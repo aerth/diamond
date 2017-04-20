@@ -58,16 +58,17 @@ func main() {
 	d.ErrorLog = log.New(os.Stderr, "⋄ ", log.Ltime)
 	println("[demo] logging to", logfile.Name())
 	println("[demo]", d.Config.Name)
-	d.Config.Addr = ":8777"
-	d.Config.Socket = "./diamond.sock"
-	d.Config.SocketHTTP = "./diamond-web.sock"
-	d.Config.Level = 1 // in three seconds we will switch gears
+	d.Config.Addr = ":8777"                    // can be empty if SocketHTTP is non-empty
+	d.Config.Socket = "./diamond.sock"         // must be non-empty
+	d.Config.SocketHTTP = "./diamond-web.sock" // can be empty
+	d.Config.Level = 1                         // in three seconds we will switch gears (demo)
 	d.Config.Debug = true
 	d.ErrorLog.SetFlags(log.Lshortfile)
 
 	err := d.Start()
 	if err != nil {
 		println("[demo]", err.Error())
+		os.Exit(111)
 	}
 
 	// redefine HookLevel0
@@ -89,7 +90,7 @@ func main() {
 		println("[demo]", "Switching gears to 3")
 		d.Runlevel(3)
 	}()
-	println("[demo]", "Now open 'diamond-admin -s ./diamond.sock'")
+	println("[demo]", "Now open 'diamond-admin -s "+d.Config.Socket)
 	// wait for quitchan
 	for {
 		select {

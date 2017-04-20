@@ -393,17 +393,19 @@ func (s *Server) runlevel3() {
 	}()
 
 	// start listening on s.Config.Addr (config or -http flag)
-	l, err := net.Listen("tcp", s.Config.Addr)
-	if err != nil {
-		s.ErrorLog.Printf("** WARNING **: %s\n", err)
-		s.ErrorLog.Printf("REVERTING to runlevel: %v\n", s.level)
-		return
+
+	if s.Config.Addr != "" {
+		l, err := net.Listen("tcp", s.Config.Addr)
+		if err != nil {
+			s.ErrorLog.Printf("** WARNING **: %s\n", err)
+			s.ErrorLog.Printf("REVERTING to runlevel: %v\n", s.level)
+			return
+		}
+		s.listenerTCP = l
+
 	}
 
-	defer s.ErrorLog.Println("RUNLEVEL 3 REACHED")
-	s.listenerTCP = l
-
-	if s.Config.UseTLS {
+	if s.Config.UseTLS && s.Config.TLSAddr != "" {
 		// start listening on s.Config.TLSAddr (config or -http flag)
 		cer, err := tls.LoadX509KeyPair(s.Config.TLSCertFile, s.Config.TLSKeyFile)
 		if err != nil {

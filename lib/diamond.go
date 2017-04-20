@@ -141,11 +141,11 @@ func NewServer(mux ...http.Handler) *Server {
 
 	// default config
 	s.Config = ConfigFields{}
-	s.Config.Addr = "127.0.0.1:8777"
+	//	s.Config.Addr = "127.0.0.1:8777"
 	s.Config.Kickable = true
 	s.Config.Kicks = true
 	s.Config.Name = "Diamond ⋄ " + version
-	s.Config.Socket = "./diamond.socket"
+//	s.Config.Socket = "./diamond.socket"
 	s.Config.DoCycleTest = false
 	s.Config.Level = 3
 	return s
@@ -276,8 +276,18 @@ func (s *Server) Status() string {
 	out += fmt.Sprintf("Current Runlevel: %v\n", s.level)
 	str := listnstr(s.level)
 	s.levellock.Unlock()
-
-	out += fmt.Sprintf("Addr: %s (%s)\n", s.Config.Addr, str)
+	if s.Config.Addr != "" {
+		out += fmt.Sprintf("Addr: %s (%s)\n", s.Config.Addr, str)
+	}
+	if s.Config.TLSAddr != "" {
+		out += fmt.Sprintf("TLS Addr: %s (%s)\n", s.Config.TLSAddr, str)
+	}
+	if s.Config.SocketHTTP != "" {
+		out += fmt.Sprintf("Socket Addr: %s (%s)\n", s.Config.SocketHTTP, str)
+	}
+	if s.Config.Addr == "" && s.Config.TLSAddr == "" && s.Config.SocketHTTP == "" {
+		out += "Not listening: no listeners in config"
+	}
 	out += fmt.Sprintf("Uptime: %s\n", time.Since(s.since))
 	out += fmt.Sprintf("Recent Connections: %v\n", s.counters.Uint64("active"))
 	out += fmt.Sprintf("Total Connections: %v\n", s.counters.Uint64("total"))

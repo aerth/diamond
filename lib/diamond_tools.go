@@ -76,9 +76,9 @@ func (s *Server) serveHTTP() {
 		return
 	}
 
-	// handle dead listener
-	if !s.Config.NoHTTP && s.listenerTCP == nil {
-		s.ErrorLog.Printf("Not serving HTTP, runlevel 3 is already dead (E2)")
+	// NoHTTP disabled, http listener is nil, and unix socket is empty, tls disabled
+	if !s.Config.NoHTTP && s.listenerTCP == nil && s.Config.SocketHTTP == "" && !s.Config.UseTLS {
+		s.ErrorLog.Printf("Can't enter runlevel 3, no listeners in server.Config")
 		return
 	}
 
@@ -95,8 +95,8 @@ func (s *Server) serveHTTP() {
 	// http listener
 	if !s.Config.NoHTTP {
 
-		// RedirectTLS
-		if s.Config.RedirectTLS && s.Config.UseTLS && s.listenerTLS != nil {
+		// RedirectTLS (http -> https)
+		if s.Config.Addr != "" && s.Config.RedirectTLS && s.Config.UseTLS && s.listenerTLS != nil {
 			srv := &http.Server{Handler: http.HandlerFunc(s.redirector(s.Config.TLSAddr))}
 			srv.ReadTimeout = time.Duration(time.Second)
 			srv.ConnState = s.connState
@@ -104,8 +104,10 @@ func (s *Server) serveHTTP() {
 			s.ErrorLog.Println("REDIRECTING", s.listenerTCP.Addr().String(), "->", s.listenerTLS.Addr().String())
 			go srv.Serve(s.listenerTCP) // listen and serve redirector
 		} else {
-			s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
-			chosen = append(chosen, s.listenerTCP)
+			if s.listenerTCP != nil {
+				s.ErrorLog.Println("Listening:", s.listenerTCP.Addr().String())
+				chosen = append(chosen, s.listenerTCP)
+			}
 		}
 	}
 
@@ -149,6 +151,9 @@ func (s *Server) serveHTTP() {
 
 	// serve loop in goroutine
 	for _, listener := range chosen {
+		if listener == nil {
+			continue
+		}
 		go func(listener net.Listener) {
 			if listener == nil {
 				s.ErrorLog.Printf("Not listening (E1).")
@@ -164,7 +169,7 @@ func (s *Server) serveHTTP() {
 		}(listener)
 
 	}
-
+	s.ErrorLog.Println("RUNLEVEL 3 REACHED")
 	// done
 }
 
