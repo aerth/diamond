@@ -116,10 +116,6 @@ type runmode uint8
 const Development = runmode(0)
 const Production = runmode(1)
 
-type runmode int
-const Development = runmode(0)
-const Production = runmode(1)
-
 // ToolUpdate if defined will be called after admin command: 'update', can be DefaultToolUpdate
 // Returned output and err will be sent to admin as socket reply
 var ToolUpdate func() (output string, err error)
