@@ -56,7 +56,7 @@ import (
 	"github.com/aerth/spawn"
 )
 
-var version = "0.6"
+var version = "0.6.1"
 
 // Server runlevels
 //
@@ -107,6 +107,10 @@ type Server struct {
 	signal bool // handle signals like SIGTERM gracefully
 
 }
+
+type runmode int
+const Development = runmode(0)
+const Production = runmode(1)
 
 // ToolUpdate if defined will be called after admin command: 'update', can be DefaultToolUpdate
 // Returned output and err will be sent to admin as socket reply
