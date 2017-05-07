@@ -43,6 +43,7 @@ Before starting the server, it should be configured. See /config.go
 package diamond
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -56,7 +57,7 @@ import (
 	"github.com/aerth/spawn"
 )
 
-var version = "0.6"
+var version = "0.6.1"
 
 // Server runlevels
 //
@@ -66,9 +67,9 @@ var version = "0.6"
 //
 //   3 = multiuser mode (public http) boots listenerTCPs
 type Server struct {
-
-	// s.Server is created immediately before serving in runlevel 3
 	Server *http.Server `json:"-"`
+
+	Context *context.Context `json:"-"` // unimplemented
 
 	// ErrorLog is a log.Logger and has SetOutput, SetFlags, and SetPrefix etc.
 	ErrorLog *log.Logger `json:"-"`
@@ -84,6 +85,8 @@ type Server struct {
 	//   }
 	//
 	Done chan string `json:"-"`
+
+	Mode runmode
 
 	// boot time, used for uptime duration
 	since time.Time
@@ -103,10 +106,15 @@ type Server struct {
 	listenerTLS  net.Listener
 	listenerUnix net.Listener
 	counters     mucount // concurrent map
-
-	signal bool // handle signals like SIGTERM gracefully
-
+	deferred     func()
+	signal       bool // handle signals like SIGTERM gracefully
+	once         sync.Once
 }
+
+type runmode uint8
+
+const Development = runmode(0)
+const Production = runmode(1)
 
 // ToolUpdate if defined will be called after admin command: 'update', can be DefaultToolUpdate
 // Returned output and err will be sent to admin as socket reply
@@ -123,35 +131,63 @@ var ToolUpgrade func() (output string, err error)
 // NewServer returns a new server, ready to be configured or started.
 // s.ErrorLog is a logger ready to use, and switches to log file.
 func NewServer(mux ...http.Handler) *Server {
-	s := new(Server)
 
-	// initialize things
-	s.since = time.Now()
-	s.telinit = make(chan int, 1)
-	s.counters = mucount{m: make(map[string]uint64)}
-	s.ErrorLog = log.New(os.Stdout, "[⋄] ", log.Ltime)
-	s.level = 1
-	s.signal = true
-
+	// mux was not given, give default
 	if mux == nil {
 		mux = []http.Handler{http.DefaultServeMux}
 	}
-	s.Done = make(chan string, 1)
-	s.SetMux(mux[0])
 
-	// default config
-	s.Config = ConfigFields{}
-	//	s.Config.Addr = "127.0.0.1:8777"
-	s.Config.Kickable = true
-	s.Config.Kicks = true
-	s.Config.Name = "Diamond ⋄ " + version
-//	s.Config.Socket = "./diamond.socket"
-	s.Config.DoCycleTest = false
-	s.Config.Level = 3
-	return s
+	//
+	//srv := &http.Server{Handler: mux[0]}
+	//srv.ReadTimeout = time.Duration(time.Second)
+	//srv.ConnState = connState
+	//srv.ErrorLog = s.ErrorLog
+	elog := log.New(os.Stdout, "[⋄] ", log.Ltime)
+	counter := mucount{m: make(map[string]uint64)}
+	return &Server{
+		deferred: func(){},
+		since:    time.Now(),
+		telinit:  make(chan int, 1),
+		counters: counter,
+		level:    1,
+		signal:   true,
+		ErrorLog: elog,
+		Server: &http.Server{
+			Handler:     mux[0],
+			ReadTimeout: time.Second,
+			ConnState: func(c net.Conn, state http.ConnState) {
+				if Debug {
+					elog.Println(state, c.LocalAddr(), c.RemoteAddr())
+				}
+				switch state {
+				case http.StateActive: // increment counters
+					go counter.Up("total", "active")
+				case http.StateClosed:
+					go func() { // make the active connections counter a little less boring
+						<-time.After(durationactive)
+						counter.Down("active")
+					}()
+					c.Close() // dont wait around to close a connection
+				case http.StateIdle:
+					c.Close() // dont wait around for stale clients to close a connection
+				case http.StateNew:
+				default:
+					elog.Println("Got new state:", state.String())
+				}
+			},
+		},
+		Done: make(chan string, 1),
+		Config: ConfigFields{
+			Addr:        "127.0.0.1:8777",
+			Kickable:    true,
+			Kicks:       true,
+			Name:        "Diamond ⋄ " + version,
+			Socket:      "./diamond.socket",
+			DoCycleTest: false,
+			Level:       3,
+		},
+	}
 }
-
-var once sync.Once
 
 // Start the admin socket, and enter runlevel: s.Config.Level
 // End with s.RunLevel(0) to close the socket properly.
@@ -161,7 +197,7 @@ func (s *Server) Start() (err error) {
 		s.ErrorLog.SetFlags(log.Lshortfile)
 	}
 	getsocket := admin(s)
-	go once.Do(func() {
+	go s.once.Do(func() {
 		// Socket listen timeout
 		go s.signalcatch()
 	})

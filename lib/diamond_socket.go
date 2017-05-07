@@ -354,6 +354,19 @@ func socketExists(path string) bool {
 	return true
 }
 
+func (s *Server) Defer(f interface{}) error {
+	fn, ok := f.(func())
+	if !ok {
+		return fmt.Errorf("ignoring defer: not a func(){}")
+	}
+	d := s.deferred
+	s.deferred = func() {
+		fn()
+		d()
+	}
+	return nil
+}
+
 // tear down and exit
 func (s *Server) runlevel0() {
 	s.runlevel6()
@@ -361,8 +374,9 @@ func (s *Server) runlevel0() {
 	defer s.ErrorLog.Println("RUNLEVEL 0 REACHED")
 	defer func() { go func() { s.Done <- DoneMessage }() }()
 	defer HookLevel0()
+	defer s.deferred()
 	if s.listenerSocket == nil {
-		s.ErrorLog.Printf("Socket disappeared before we could close it.")
+		s.ErrorLog.Printf("info: socket disappeared before we could close it")
 		return
 	}
 	e := s.listenerSocket.Close()

@@ -51,6 +51,10 @@ Output to /dev/stderr:
 func main() {
 	// Create new diamond.Server
 	d := diamond.NewServer()
+	fn := func(){
+		println("hello defer in main")
+	}
+	d.Defer(fn)
 	d.SetMux(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(d.Status()))
 	}))
@@ -75,7 +79,7 @@ func main() {
 	println("[demo]", "adding hook for runlevel 0")
 	quitchan := make(chan string, 1)
 	diamond.HookLevel0 = func() {
-		quitchan <- "goodbye!"
+		quitchan <- "HookLevel0 runs after all deferred functions"
 	}
 
 	// wait three seconds, switch gears
@@ -92,6 +96,10 @@ func main() {
 	}()
 	println("[demo]", "Now open 'diamond-admin -s "+d.Config.Socket)
 	// wait for quitchan
+	fn2 := func(){
+		println("defer rocks!")
+	}
+	d.Defer(fn2)
 	for {
 		select {
 		case <-time.After(100 * time.Second):
