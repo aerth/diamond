@@ -41,15 +41,11 @@ type Client struct {
 //
 // It returns an error only if the socket can not be resolved
 func NewClient(socketpath string) (*Client, error) {
-	c := new(Client)
-	c.socket = socketpath
-	addr, err := net.ResolveUnixAddr("unix", c.socket)
+	addr, err := net.ResolveUnixAddr("unix", socketpath)
 	if err != nil {
 		return nil, err
 	}
-	c.serveraddr = addr
-	return c, nil
-
+	return &Client{socket: socketpath, serveraddr: addr}, nil
 }
 
 // Send a command to the server's unix socket

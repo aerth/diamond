@@ -297,11 +297,11 @@ func admin(s *Server) (ch chan int) {
 		for {
 			e = s.socketAccept()
 			if e != nil {
-				s.ErrorLog.Printf("SOCKET %s", e.Error())
+				s.ErrorLog.Printf("ADMIN SOCKET %s", e.Error())
 				return
 			}
 			if s.Config.Debug {
-				s.ErrorLog.Printf("Socket Connection: %s", time.Now().Format(time.Kitchen))
+				s.ErrorLog.Printf("Admin Socket Connection: %s", time.Now().Format(time.Kitchen))
 			}
 
 		}
@@ -354,14 +354,18 @@ func socketExists(path string) bool {
 	return true
 }
 
-func (s *Server) Defer(f interface{}) error {
-	fn, ok := f.(func())
-	if !ok {
-		return fmt.Errorf("ignoring defer: not a func(){}")
+func (s *Server) Defer(f *func()) error {
+	if f == nil {
+		return fmt.Errorf("ignoring defer: is not a pointer to function")
 	}
+
+	// add to deferred funcs
 	d := s.deferred
 	s.deferred = func() {
-		fn()
+		if f != nil {
+			f := *f
+			f()
+		}
 		d()
 	}
 	return nil

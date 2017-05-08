@@ -29,13 +29,13 @@
 
 	1 is single user, using a unix socket for admin commands
 
-	3 is multiuser, opening tcp listener(s)
+	3 is multiuser, opening tcp listener(s) (http, https, http on unix socket)
 
 Assuming your http.Handler is named mux, this is how to create a new diamond server:
 
 	s := diamond.NewServer(mux)
 
-Before starting the server, it should be configured. See /config.go
+Before starting the server, it should be configured. See 'godoc github.com/aerth/diamond/lib ConfigFields'
 
 
 
@@ -51,7 +51,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/aerth/spawn"
@@ -105,15 +104,18 @@ type Server struct {
 	listenerTCP  net.Listener
 	listenerTLS  net.Listener
 	listenerUnix net.Listener
-	counters     mucount // concurrent map
+	counters     mucount // safe concurrent map
 	deferred     func()
-	signal       bool // handle signals like SIGTERM gracefully
-	once         sync.Once
+	signal       bool      // handle signals like SIGTERM gracefully
+	once         sync.Once // do socket once
 }
 
 type runmode uint8
 
+// Development ...
 const Development = runmode(0)
+
+// Production ...
 const Production = runmode(1)
 
 // ToolUpdate if defined will be called after admin command: 'update', can be DefaultToolUpdate
@@ -137,22 +139,21 @@ func NewServer(mux ...http.Handler) *Server {
 		mux = []http.Handler{http.DefaultServeMux}
 	}
 
-	//
-	//srv := &http.Server{Handler: mux[0]}
-	//srv.ReadTimeout = time.Duration(time.Second)
-	//srv.ConnState = connState
-	//srv.ErrorLog = s.ErrorLog
+	// log to stdout by default
 	elog := log.New(os.Stdout, "[⋄] ", log.Ltime)
 	counter := mucount{m: make(map[string]uint64)}
 	return &Server{
-		deferred: func(){},
+		deferred: func() {},
 		since:    time.Now(),
 		telinit:  make(chan int, 1),
 		counters: counter,
 		level:    1,
 		signal:   true,
 		ErrorLog: elog,
+		Done:     make(chan string, 1),
+		// s.Server
 		Server: &http.Server{
+			ErrorLog: elog,
 			Handler:     mux[0],
 			ReadTimeout: time.Second,
 			ConnState: func(c net.Conn, state http.ConnState) {
@@ -176,7 +177,7 @@ func NewServer(mux ...http.Handler) *Server {
 				}
 			},
 		},
-		Done: make(chan string, 1),
+		// s.Config
 		Config: ConfigFields{
 			Addr:        "127.0.0.1:8777",
 			Kickable:    true,
@@ -202,6 +203,7 @@ func (s *Server) Start() (err error) {
 		go s.signalcatch()
 	})
 
+	// timeout waiting for socket
 	select {
 	case <-getsocket:
 		// good
@@ -220,11 +222,13 @@ func (s *Server) Start() (err error) {
 
 	/*
 	 * WARNING: No os.Exit() beyond this point
-	 * Use s.Runlevel(0)
+	 * Use s.Runlevel(0) to exit and clean up properly
 	 */
 	if s.Config.Level == 0 {
+		s.ErrorLog.Println("Default level 0 -> 1")
 		s.Config.Level = 1
 	}
+
 	s.telinit <- s.Config.Level // go to default runlevel
 	return nil                  // no errors
 }
@@ -234,10 +238,17 @@ func (s *Server) signalcatch() {
 		return
 	}
 	quitchan := make(chan os.Signal, 1)
-	signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
+
+	//signal.Notify(quitchan, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM)
+	signal.Notify(quitchan) // all signals
 	sig := <-quitchan
+	// output to stderr
 	println("Diamond got signal:", sig.String()) // stderr
+
+	// output to log, (may be stderr, in which case there is a duplicate line, thats okay.)
 	s.ErrorLog.Println("Diamond got signal:", sig.String())
+
+	// enter runlevel 0, calling deferred functions before HookLevel0
 	s.Runlevel(0)
 	return
 }
