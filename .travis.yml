@@ -3,7 +3,7 @@ sudo: false
 go:
 - 1.8
 - 1.7.4
-- master
+- tip 
 install:
 - go get -t ./...
 before_script:
