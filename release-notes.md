@@ -1,3 +1,21 @@
+# diamond v0.8
+
+i have decided to rewrite the diamond library, way leaner.
+
+the new diamond library does the following:
+
+  * opens unix socket for master control
+  * respects the "KICK" command
+  * runlevels that can be customized
+
+thats all. the diamond-admin command still works as expected.
+
+thanks for using DIAMOND!
+
+submit bugs, feature requests, and pull requests at github.com/aerth/diamond
+
+- aerth
+
 # diamond v0.6
 
 further gutting
