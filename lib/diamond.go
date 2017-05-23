@@ -153,7 +153,7 @@ func NewServer(mux ...http.Handler) *Server {
 		Done:     make(chan string, 1),
 		// s.Server
 		Server: &http.Server{
-			ErrorLog: elog,
+			ErrorLog:    elog,
 			Handler:     mux[0],
 			ReadTimeout: time.Second,
 			ConnState: func(c net.Conn, state http.ConnState) {
