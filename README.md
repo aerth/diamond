@@ -27,19 +27,6 @@ DONE: telinit 3
 
 Diamond requires Go 1.6.4 or newer
 
-```
-package main
-import "github.com/aerth/diamond/lib"
-import "net/http"
-func main(){
-router := http.FileServer(http.Dir("."))
-d := diamond.NewServer(router)
-d.Start()
-println(<-d.Done)
-}
-
-```
-
 Read more:
 
 [aerth.github.io/diamond](https://aerth.github.io/diamond/)
@@ -48,8 +35,14 @@ Read more:
 
 #### CAUTION
 
-API may change without notice
+API may change without notice!
 
 #### Contributing
 
 Submit new issue or pull request
+
+### Old version
+
+```
+import "gopkg.in/aerth/diamond.v1"
+```
