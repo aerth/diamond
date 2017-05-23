@@ -54,7 +54,9 @@ type Server struct {
 type RunlevelFunc func() error
 
 type Options struct {
-	Verbose bool
+	Verbose  bool
+	Kickable bool
+	Kicks    bool
 }
 
 func NewServer(socket string) (*Server, error) {

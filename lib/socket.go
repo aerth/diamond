@@ -51,6 +51,9 @@ func (p *Packet) Kick(arg string, reply *string) error {
 	return nil
 }
 
+func (p *Packet) KICK(arg string, reply *string) error {
+	return p.Kick(arg, reply)
+}
 func (p *Packet) Runlevel(arg string, reply *string) error {
 	n, err := strconv.Atoi(arg)
 	if err != nil {

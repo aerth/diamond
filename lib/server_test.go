@@ -146,3 +146,46 @@ func TestChangeRunlevel(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestClientKick(t *testing.T) {
+	println("sending KICK")
+	srv, socket := createTestServer(t)
+	srv.Config.Kickable = true
+	defer os.Remove(socket)
+
+	srv.SetRunlevel(1, func() error { fmt.Println("hi"); return nil })
+
+	println("Creating Client")
+	client, err := NewClient(socket)
+	if err != nil {
+		t.Logf("tried to create client, got error: %v", err)
+		t.FailNow()
+	}
+
+	var cmdreply string
+	c := make(chan string, 1)
+	go func() {
+		println("Sending KICK")
+		reply, err := client.Send("KICK")
+		if err != nil {
+			t.Logf("tried to send command, got error: %v", err)
+			t.FailNow()
+		}
+		c <- reply
+	}()
+
+	select {
+	case <-time.After(3 * time.Second):
+		t.Log("Timeout waiting for reply")
+		t.FailNow()
+	case reply := <-c:
+		cmdreply = reply
+	}
+
+	if cmdreply != "OKAY" {
+		t.Log("Wanted OKAY, got:", cmdreply)
+		t.FailNow()
+	}
+	println("kicked!")
+
+}
