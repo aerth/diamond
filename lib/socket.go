@@ -29,11 +29,11 @@ import (
 	"strconv"
 )
 
-type Packet struct {
+type packet struct {
 	parent *Server
 }
 
-func (p *Packet) Echo(arg string, reply *string) error {
+func (p *packet) Echo(arg string, reply *string) error {
 	if arg == "" {
 		return fmt.Errorf("empty argument")
 	}
@@ -41,7 +41,7 @@ func (p *Packet) Echo(arg string, reply *string) error {
 	return nil
 }
 
-func (p *Packet) Kick(arg string, reply *string) error {
+func (p *packet) Kick(arg string, reply *string) error {
 	if !p.parent.Config.Kickable {
 		*reply = "NOWAY"
 		return fmt.Errorf("NOWAY")
@@ -51,10 +51,10 @@ func (p *Packet) Kick(arg string, reply *string) error {
 	return nil
 }
 
-func (p *Packet) KICK(arg string, reply *string) error {
+func (p *packet) KICK(arg string, reply *string) error {
 	return p.Kick(arg, reply)
 }
-func (p *Packet) Runlevel(arg string, reply *string) error {
+func (p *packet) Runlevel(arg string, reply *string) error {
 	n, err := strconv.Atoi(arg)
 	if err != nil {
 		*reply = "error"

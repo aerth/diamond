@@ -152,7 +152,7 @@ func (s *Server) socketAccept() error {
 		return fmt.Errorf("diamond: Could not accept connection: %v", err)
 	}
 	rcpServer := rpc.NewServer()
-	var pack = new(Packet)
+	var pack = new(packet)
 	pack.parent = s
 	if err = rcpServer.RegisterName("Packet", pack); err != nil {
 		return fmt.Errorf("diamond: %s",
