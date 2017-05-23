@@ -2,9 +2,7 @@
 
 ### Runlevels for your web application
 
-#### Latest: [tiny branch](https://github.com/aerth/diamond/tree/tiny)
-
- :zap: ```telinit 4```
+:zap: ```telinit 4```
 
 [![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
 [![Build Status](https://travis-ci.org/aerth/diamond.svg?branch=master)](https://travis-ci.org/aerth/diamond)
