@@ -1,172 +1,34 @@
-# DIAMOND ⋄
+# diamond
 
-[![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
+### add runlevels to your application
 
-Like a transmission, a diamond server has gears called "runlevels".
+Some reasons to use `diamond` include:
 
-You can define functions that are called when shifting to a runlevel. These are called HookLevels:
+  * Remove downtime while redeploying
+  * Have more control of your application (not just start and stop)
+  * Quickly disable all tcp/socket listeners
+  * ... and quickly re-enable existing or additional listeners
+  * Have two applications sharing a single port or http socket (one at a time)
+  * Use shell or SSH to trigger events in your application
+  * Schedule listeners via crontab, systemd unit scripts, or in your Go code
+  * Testing, making the `diamond` library more stable and useful
 
-  * ```diamond.HookLevel0``` runs when 0 is reached, before sending to quitchan
-  * ```diamond.HookLevel1``` runs when 1 is reached
-  * ```diamond.HookLevel3``` runs when 3 is reached
+Some cool features include:
 
-![Screenshot of both diamond-admin and diamond server](https://github.com/aerth/diamond/blob/master/docs/diamond-screenshot.png?raw=true)
+  * Control socket (kind of [but not] like tmux)
+  * Command line client for connecting to control socket
+  * Close, Reopen 'TCP' or 'unix' listeners
+  * The 'Kick' feature
 
-You can pass commands as arguments to diamond-admin
+About KICK:
 
-```
-./diamond-admin -s diamond.sock telinit 3
-./diamond-admin -s diamond.sock telinit 1
-./diamond-admin -s diamond.sock telinit 0
-```
-
-include CUSTOM prefix for custom commands (CustomCommander)
-
-```./diamond-admin -s diamond.sock CUSTOM commandname arguments```
-
-Configuration allows a "default runlevel", either 1 or 3.
-
-Diamond allows the administrator (via UNIX socket)
-to do more than just start and stop the process.
-
-With Runlevel hooks, you can open & close DB properly, etc
-
-
-Open admin CUI program like so:
-
-```
-diamond-admin -s $SOCKETNAME
-```
-
-Now your application has runlevels!
-
-Once connected to the UNIX socket, the administrator can:
-
-  * Switch runtime levels
-  * Redeploy (respawn the binary)
-
-In runlevel 1,
-        only the local administrator may access the server using the UNIX socket.
-
-In runlevel 3,
-        we open a TCP listener and serve HTTP for the public.
-
-This project is split into three sections.
-
-**Library, Admin, Example Server**
-
-## 1. diamond library
-
-```
-package main
-import "github.com/aerth/diamond/lib"
-import "net/http"
-func main(){
-router := http.FileServer(http.Dir("."))
-d := diamond.NewServer(router)
-d.Start()
-println(<-d.Done)
-}
-```
-
-Stays on, Receives COMMANDS from the client,
-which is owned by the same UNIX user.
-The server has three modes of operation, which
-are called "runlevels". They are, in order:
-
-  * 0 = halt, stopping everything (not os.Exit!)
-  * 1 = single user mode, only allowing RPC via socket
-  * 3 = multiuser mode, allowing HTTP/HTTPS
-
-When entering "runlevel 1", the server opens a
-tcp socket, which is how the administrator can make changes.
-It stays open until runlevel 0 is entered, in which the server is stopped completely.
-
-Entering runlevel 1 from a higher level closes all TCP connection immediately.
-
-Entering "runlevel 3" opens up a TCP port for
-HTTP traffic.
-
-Public may access the web application through ip:port,
-or the Diamond may be placed behind a reverse proxy.
-
-The administrator accesses the daemon through
-the supplied command line program (via UNIX socket).
-
-### Built in upgrade mechanisms
-Admin commands `update`, `upgrade`, `rebuild`, `redeploy` deal with upgrading
-the actual running server.
-
-#### Behind the hood:
-
-**update** runs git pull origin master
-
-**rebuild** runs './build.sh server'
-
-**upgrade** runs both, using something like 'update && rebuild', only rebuilding if update was successful.
-
-**redeploy** command spawns another instance and then switches to runlevel 0, leaving.
+  * KICK is sort of like sending SIGHUP to the program, but it is via the control socket
+  * When booting up, if configured as KICKS, if the `control socket` exists, it will be send a KICK command
+  * If the diamond system is configured to be KICKABLE, it will respond with OKAY and run Runlevel(0)
+  * If the response is OKAY, the new booting diamond will then create the socket and begin
+  * If the response is NOWAY, the new booting diamond will exit with an error
+  * The OKAY response blocks until the socket is made and accepts connections
+  * If a `diamond client` sends a KICK command, it is the same as the `runlevel 0` command
+  * For expected results, the running `diamond server` must be configured as `Kickable` and the one booting configured as Kicks
 
 
-## 2. Client / Command (diamond-admin)
-
-Library uses CHMODFILE permissions, defined by default as -rw-r----- (0640)
-
-
-Commands:
-
-  * telinit 0-4 - Tell the server to initialize runlevel X
-  * restart - Alias of 'redeploy'
-  * redeploy - Respawn executable (same args, current env)
-  * update - `git pull origin master` by default OFF. See `func init` in `usage.go`
-  * upgrade - Fetch latest source, build, install. does not restart.
-  * CUSTOM <command> - Execute custom command, see CustomCommander 'hello' duck
-
-
-## Reporting issues, Contributing
-
-Please submit a pull request if:
-
-  * I forgot something
-  * You have a bug fix
-  * You have simplified the library, removed lines of code, etc
-  * You have an improvement
-
-Please submit a new github issue if:
-
-  * You have encountered a bug while using diamond
-  * You have a question about an undocumented feature
-
-Contributions are welcome
-
-## Author
-
-Copyright (c) 2016,2017  aerth <aerth@riseup.net>
-
-```
-The MIT License (MIT)
-
-Copyright (c) 2016,2017  aerth <aerth@riseup.net>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-[aerth.github.io/diamond](https://aerth.github.io/diamond/)
-
-[github.com/aerth/diamond](https://github.com/aerth/diamond/)
