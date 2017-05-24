@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -46,6 +48,11 @@ var foo = bar{
 	created: time.Now(),
 }
 
+func (b bar) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hello"))
+
+}
+
 // yes, runlevel can be a method!
 func (b bar) runlevel3() error {
 	fmt.Println(time.Now(), "demo runlevel 3")
@@ -54,7 +61,6 @@ func (b bar) runlevel3() error {
 }
 
 func main() {
-
 	// create
 	srv, err := diamond.New("diamond.socket")
 	if err != nil {
@@ -69,6 +75,25 @@ func main() {
 	srv.SetRunlevel(1, runlevel1)
 	srv.SetRunlevel(3, foo.runlevel3)
 
+	// Add listeners
+	// Listen on TCP port 2000 on all interfaces.
+	l1, err := net.Listen("tcp", ":2000")
+	if err != nil {
+		srv.Log.Println(err)
+		srv.Runlevel(0)
+		return
+	}
+	l2, err := net.Listen("unix", "web.socket")
+	if err != nil {
+		srv.Log.Println(err)
+		srv.Runlevel(0)
+		return
+	}
+
+	// diamond will close listener
+	srv.AddListener(l1)
+	srv.AddListener(l2)
+	srv.SetHandler(foo)
 	// begin
 	err = srv.Runlevel(1)
 	if err != nil {

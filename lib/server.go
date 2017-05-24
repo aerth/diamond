@@ -50,7 +50,7 @@ type Server struct {
 	level           int
 	locklevel       sync.Mutex
 	done            chan int
-	httpmux         *http.ServeMux
+	httpmux         http.Handler
 }
 
 type RunlevelFunc func() error
@@ -66,12 +66,24 @@ func NewServer(handler *http.ServeMux, socket string) (*Server, error) {
 	if e != nil {
 		return nil, e
 	}
-	s.SetMux(handler)
+	s.SetHandler(handler)
 	return s, nil
 }
 
-func (s *Server) SetMux(mux *http.ServeMux) {
-	s.httpmux = mux
+func (s *Server) SetHandler(h http.Handler) {
+	s.locklevel.Lock()
+	defer s.locklevel.Unlock()
+	s.httpmux = h
+}
+
+func (s *Server) AddListener(l net.Listener) error {
+	s.locklevel.Lock()
+	defer s.locklevel.Unlock()
+	if s.level > 1 {
+		return fmt.Errorf("already listening")
+	}
+	s.listeners = append(s.listeners, l)
+	return nil
 }
 
 func New(socket string) (*Server, error) {
@@ -181,7 +193,7 @@ func (s *Server) socketAccept() error {
 	rcpServer := rpc.NewServer()
 	var pack = new(packet)
 	pack.parent = s
-	if err = rcpServer.RegisterName("Packet", pack); err != nil {
+	if err = rcpServer.RegisterName("Diamond", pack); err != nil {
 		return fmt.Errorf("diamond: %s",
 			err.Error())
 	}

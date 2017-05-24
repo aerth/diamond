@@ -58,7 +58,7 @@ func (c *Client) Send(cmd string, args ...string) (reply string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = client.Call("Packet."+strings.Title(cmd), strings.Join(args, " "), &reply)
+	err = client.Call("Diamond."+strings.Title(cmd), strings.Join(args, " "), &reply)
 	if err != nil {
 		return "", err
 	}
