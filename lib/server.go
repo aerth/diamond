@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/rpc"
 	"os"
 	"path/filepath"
@@ -36,8 +37,8 @@ import (
 	"time"
 )
 
-const CHMODDIR = 0750
-const CHMODFILE = 0750
+const CHMODDIR = 0750  // user read/write/searchable, group read/writable
+const CHMODFILE = 0770 // user/group read/write/exectuable
 
 type Server struct {
 	Config          *Options
@@ -49,6 +50,7 @@ type Server struct {
 	level           int
 	locklevel       sync.Mutex
 	done            chan int
+	httpmux         *http.ServeMux
 }
 
 type RunlevelFunc func() error
@@ -59,7 +61,20 @@ type Options struct {
 	Kicks    bool
 }
 
-func NewServer(socket string) (*Server, error) {
+func NewServer(handler *http.ServeMux, socket string) (*Server, error) {
+	s, e := New(socket)
+	if e != nil {
+		return nil, e
+	}
+	s.SetMux(handler)
+	return s, nil
+}
+
+func (s *Server) SetMux(mux *http.ServeMux) {
+	s.httpmux = mux
+}
+
+func New(socket string) (*Server, error) {
 	_, err := os.Stat(socket)
 	if err == nil {
 		return nil, fmt.Errorf("socket already exists, delete if you want")
@@ -72,6 +87,7 @@ func NewServer(socket string) (*Server, error) {
 		controlSocket: socket,
 		runlevels:     make(map[int]RunlevelFunc),
 		done:          make(chan int, 1),
+		httpmux:       http.NewServeMux(),
 	}
 
 	// create and start listening on socket
@@ -98,6 +114,16 @@ func (s *Server) GetRunlevel() int {
 func (s *Server) Runlevel(level int) error {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
+
+	switch level {
+	default:
+	case 0:
+		// remove socket file
+		if e := os.Remove(s.controlSocket); e != nil {
+			s.Log.Println(e)
+		}
+	}
+
 	if fn, ok := s.runlevels[level]; ok {
 		err := fn()
 		if err != nil {
@@ -105,6 +131,7 @@ func (s *Server) Runlevel(level int) error {
 		}
 		s.level = level
 		return nil
+
 	}
 
 	return fmt.Errorf(`runlevel "%v" does not exist`, level)

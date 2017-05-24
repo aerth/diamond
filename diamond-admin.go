@@ -69,9 +69,9 @@ func main() {
 	if *sock != "" {
 		socketpath = *sock
 	}
-	if len(flag.Args()) > 1 { // custom CLI command, no menu
+	if len(flag.Args()) > 0 { // custom CLI command, no menu
 		client := buildClient()
-		reply, err := client.Send(strings.Join(flag.Args()[1:], " "))
+		reply, err := client.Send(flag.Args()[0], strings.Join(flag.Args()[1:], " "))
 		if err != nil {
 			println(err.Error())
 		}
@@ -93,28 +93,16 @@ func quit(mm *clix.MenuBar) {
 
 func buildWindow() *clix.MenuBar {
 	mm := clix.NewMenuBar(nil)
-	mm.SetMessage("⋄ DIAMOND CMD v0.2")
+	mm.SetMessage("⋄ DIAMOND CMD v0.3")
 	scrol := clix.NewScrollFrame("⋄")
 	mm.AttachScroller(scrol)
 	return mm
 }
 
 func buildMenu(mm *clix.MenuBar) {
-	mm.NewItem("Check Server Status") // status
-	mm.NewItem("Clear Buffer")        // save entire session to /tmp file
-	mm.NewItem("Toggle Buffer")       // save entire session to /tmp file
-	mm.NewItem("Save Buffer")         // save entire session to /tmp file
 	entry := clix.NewEntry(mm.GetScreen())
-	mm.AddEntry("Other", entry) // manual command
+	mm.AddEntry("Command", entry) // manual command
 	mm.NewItem("Quit Admin")
-	mm2 := clix.NewMenuBar(mm.GetScreen())
-	mm2.NewItem("help")
-	mm2.NewItem("Single User Mode") // telinit 1
-	mm2.NewItem("Multi User Mode")  // telinit 3
-	mm2.NewItem("Redeploy Server")  // redeploy
-	mm2.NewItem("Clear Buffer")     // save entire session to /tmp file
-	mm2.NewItem("Save Buffer")      // save entire session to /tmp file
-	mm.AddSibling(mm2)
 
 }
 
@@ -162,7 +150,7 @@ func buildClient() *diamond.Client {
 		os.Exit(2)
 	}
 	client.Name = clientname
-	r, e := client.Send("HELLO from " + client.Name)
+	r, e := client.Send("HELLO", "from "+client.Name)
 	if e != nil {
 		if strings.Contains(e.Error(), "no such file or directory") {
 			notrunning()
@@ -181,30 +169,10 @@ func buildClient() *diamond.Client {
 	}
 
 	client.ServerName = strings.TrimPrefix(r, "HELLO from ")
-	args := strings.Join(flag.Args(), " ")
-	if args != "" { // send command
-		args = os.ExpandEnv(args) // use $ENV stuff in commands
-		println("Command:", args)
-		rp, rerr := client.Send(args)
-		if rp != "" {
-			println(rp)
-		}
-		if rerr != nil {
-			println(rerr.Error())
-			os.Exit(222)
-		}
-		if rp == "" {
-			println("empty reply from server")
-			os.Exit(222)
-		}
-		os.Exit(0)
-	}
-
 	return client
 }
 
 var buf = new(bytes.Buffer)
-var bbuf = new(bytes.Buffer)
 
 func doCUI(socketpath string) {
 	client := buildClient()
@@ -232,7 +200,14 @@ func doCUI(socketpath string) {
 		}
 		if cmd != "" {
 			buf.WriteString("SENT: " + cmd)
-			msg, resperr = client.Send(cmd)
+
+			argv := strings.Split(cmd, " ")
+			if len(argv) < 2 {
+				msg, resperr = client.Send(argv[0])
+			} else {
+				msg, resperr = client.Send(argv[0], strings.Join(argv[1:], " "))
+			}
+
 			buf.WriteString("REPLY: " + msg + "\n")
 			if resperr != nil {
 				mm.GetScreen().Fini()

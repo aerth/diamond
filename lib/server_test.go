@@ -148,7 +148,6 @@ func TestChangeRunlevel(t *testing.T) {
 }
 
 func TestClientKick(t *testing.T) {
-	println("sending KICK")
 	srv, socket := createTestServer(t)
 	srv.Config.Kickable = true
 	defer os.Remove(socket)

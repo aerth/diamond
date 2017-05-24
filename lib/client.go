@@ -38,9 +38,8 @@ type Client struct {
 	serveraddr *net.UnixAddr // gets parsed from path in NewClient(path)
 }
 
-// NewClient returns a  Client, to connect to the socket, which location is the only argument
-//
-// It returns an error only if the socket can not be resolved
+// NewClient returns an initialized Client, returning an error only if the socket can not be resolved
+// It is possible that the socket does not exist yet
 func NewClient(socketpath string) (*Client, error) {
 	addr, err := net.ResolveUnixAddr("unix", socketpath)
 	if err != nil {
@@ -50,6 +49,10 @@ func NewClient(socketpath string) (*Client, error) {
 }
 
 // Send command and optional arguments and return the reply and any errors
+// Commands available to the client are exported methods of Packet type:
+//   * returning error
+//   * first argument of string ("args")
+//   * second argument of pointer to string (used as "reply")
 func (c *Client) Send(cmd string, args ...string) (reply string, err error) {
 	client, err := rpc.Dial("unix", c.serveraddr.String())
 	if err != nil {
@@ -60,4 +63,9 @@ func (c *Client) Send(cmd string, args ...string) (reply string, err error) {
 		return "", err
 	}
 	return reply, nil
+}
+
+// GetSocket returns the filename of socket used for connections
+func (c *Client) GetSocket() string {
+	return c.socket
 }
