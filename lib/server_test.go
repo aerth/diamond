@@ -16,7 +16,7 @@ func TestNewServer(t *testing.T) {
 	}
 	os.Remove(socket.Name())
 	defer os.Remove(socket.Name()) // isnt created yet
-	_, err = NewServer(socket.Name())
+	_, err = New(socket.Name())
 	if err != nil {
 		t.Logf("tried to create socket %q, got error: %v", socket.Name(), err)
 		t.FailNow()
@@ -30,7 +30,7 @@ func createTestServer(t *testing.T) (*Server, string) {
 		t.FailNow()
 	}
 	os.Remove(socket.Name())
-	srv, err := NewServer(socket.Name())
+	srv, err := New(socket.Name())
 	if err != nil {
 		t.Logf("tried to create socket %q, got error: %v", socket.Name(), err)
 		t.FailNow()
@@ -64,7 +64,7 @@ func TestClient(t *testing.T) {
 	os.Remove(socket.Name())
 	defer os.Remove(socket.Name()) // isnt created yet
 	println("Creating Server")
-	srv, err := NewServer(socket.Name())
+	srv, err := New(socket.Name())
 	if err != nil {
 		t.Logf("tried to create socket %q, got error: %v", socket.Name(), err)
 		t.FailNow()

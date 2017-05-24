@@ -37,9 +37,13 @@ import (
 	"time"
 )
 
-const CHMODDIR = 0750  // user read/write/searchable, group read/writable
-const CHMODFILE = 0770 // user/group read/write/exectuable
+// CHMODDIR by default is user read/write/searchable, group read/writable
+var CHMODDIR os.FileMode = 0750
 
+// CHMODFILE (control socket) by default is user/group read/write/exectuable
+var CHMODFILE os.FileMode = 0770
+
+// Server listens on control socket, controlling listeners and runlevels
 type Server struct {
 	Config          *Options
 	Log             *log.Logger
@@ -53,15 +57,24 @@ type Server struct {
 	httpmux         http.Handler
 }
 
+// RunlevelFunc is any function with no arguments that returns an error
+// It can be a method, such as `func (f foo) runlevel9000() error {}`
 type RunlevelFunc func() error
 
+// Options modify how the diamond system functions
 type Options struct {
-	Verbose  bool
+	// More verbose output
+	Verbose bool
+
+	// Able to be KICKed via control socket (same as command 'runlevel 0')
 	Kickable bool
-	Kicks    bool
+
+	// Will KICK if control socket exists at boot time, replacing socket
+	Kicks bool
 }
 
-func NewServer(handler *http.ServeMux, socket string) (*Server, error) {
+// NewServer returns a new server, and an error if the socket path is not valid
+func NewServer(handler http.Handler, socket string) (*Server, error) {
 	s, e := New(socket)
 	if e != nil {
 		return nil, e
@@ -70,26 +83,51 @@ func NewServer(handler *http.ServeMux, socket string) (*Server, error) {
 	return s, nil
 }
 
+// SetHandler for all future connections via http socket or tcp listeners
+// This is only useful for web applications and can be safely ignored
 func (s *Server) SetHandler(h http.Handler) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	s.httpmux = h
 }
 
-func (s *Server) AddListener(l net.Listener) error {
+// AddListener to the list of listeners, returning the
+func (s *Server) AddListener(l net.Listener) (n int, err error) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	if s.level > 1 {
-		return fmt.Errorf("already listening")
+		n = len(s.listeners)
+		return n, fmt.Errorf("already listening on %v listeners", n)
 	}
 	s.listeners = append(s.listeners, l)
-	return nil
+	n = len(s.listeners)
+	return n, nil
 }
 
+// New diamond system, listening at specified socket.
 func New(socket string) (*Server, error) {
 	_, err := os.Stat(socket)
 	if err == nil {
-		return nil, fmt.Errorf("socket already exists, delete if you want")
+		client, err := NewClient(socket)
+		if err != nil {
+			return nil, fmt.Errorf("socket already exists and client could not be created: %v", err)
+		}
+		var resp string
+		resp, err = client.Send("KICK")
+		if err != nil {
+			return nil, fmt.Errorf("socket already exists and server isnt responding, delete if you want (error %v)", err)
+		}
+		if resp != "OKAY" {
+			return nil, fmt.Errorf("socket already exists and server responeded with: %q", resp)
+		}
+
+		// response was OKAY, no errors.
+		// this means we kicked the old server, and the socket *should* be removed.
+		// lets force remove the socket and continue as usual ;)
+		err = os.Remove(socket)
+		if err != nil {
+			return nil, fmt.Errorf("socket already exists and could not be removed: %q", err)
+		}
 	}
 
 	srv := &Server{
