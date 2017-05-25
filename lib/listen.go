@@ -60,13 +60,14 @@ func (s *System) openlisteners() error {
 			} else {
 				s.listeners[i].listener = l
 				s.Log.Printf("now able to listen (%s) on %s", s.listeners[i].ltype, s.listeners[i].laddr)
-				go func() {
-					s.Log.Printf("serving http on %s", s.listeners[i].laddr)
-					s.Server.Serve(l)
+				s.Log.Printf("serving http on %s", s.listeners[i].laddr)
+				go func(li net.Listener, laddr string) {
+
+					s.Server.Serve(li)
 					if err != nil {
-						s.Log.Printf("no longer serving http on %s: %s", s.listeners[i].laddr, err.Error())
+						s.Log.Printf("no longer serving http on %s: %s", laddr, err.Error())
 					}
-				}()
+				}(l, s.listeners[i].laddr)
 			}
 
 		}
