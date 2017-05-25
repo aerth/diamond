@@ -47,7 +47,7 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-func createTestServer(t *testing.T) (*Server, string) {
+func createTestServer(t *testing.T) (*System, string) {
 	socket, err := ioutil.TempFile("", "testsocket") // unique filename
 	if err != nil {
 		t.Log(err)

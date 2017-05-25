@@ -31,7 +31,7 @@ import (
 )
 
 type packet struct {
-	parent *Server
+	parent *System
 }
 
 func (p *packet) HELLO(arg string, reply *string) error {

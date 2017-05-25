@@ -43,14 +43,15 @@ var CHMODDIR os.FileMode = 0750
 // CHMODFILE (control socket) by default is user/group read/write/exectuable
 var CHMODFILE os.FileMode = 0770
 
-// Server listens on control socket, controlling listeners and runlevels
-type Server struct {
+// System listens on control socket, controlling listeners and runlevels
+type System struct {
 
 	// Config can be configured
 	Config *Options
 
 	// Log can be redirected
 	Log             *log.Logger
+	Server          *http.Server
 	listeners       []*listener
 	controlSocket   string // path to socket
 	controlListener net.Listener
@@ -88,7 +89,7 @@ type Options struct {
 }
 
 // NewServer returns a new server, and an error if the socket path is not valid
-func NewServer(handler http.Handler, socket string) (*Server, error) {
+func NewServer(handler http.Handler, socket string) (*System, error) {
 	s, e := New(socket)
 	if e != nil {
 		return nil, e
@@ -99,16 +100,18 @@ func NewServer(handler http.Handler, socket string) (*Server, error) {
 
 // SetHandler for all future connections via http socket or tcp listeners
 // This is only useful for web applications and can be safely ignored
-func (s *Server) SetHandler(h http.Handler) {
-	s.locklevel.Lock()
-	defer s.locklevel.Unlock()
-	s.httpmux = h
+func (s *System) SetHandler(h http.Handler) error {
+
+	if l := s.level; l > 1 {
+		return fmt.Errorf("need to be in runlevel 1, currently in runlevel %v", l)
+	}
+
+	s.Server.Handler = h
+	return nil
 }
 
 // AddListener to the list of listeners, returning the
-func (s *Server) AddListener(ltype, laddr string) (n int, err error) {
-	s.locklevel.Lock()
-	defer s.locklevel.Unlock()
+func (s *System) AddListener(ltype, laddr string) (n int, err error) {
 	if s.level > 1 {
 		n = len(s.listeners)
 		return n, fmt.Errorf("already listening on %v listeners, enter runlevel 1 first", n)
@@ -122,7 +125,7 @@ func (s *Server) AddListener(ltype, laddr string) (n int, err error) {
 
 }
 
-func (s *Server) listen() (err error) {
+func (s *System) nothinglisten() (err error) {
 	var errors []error
 	for i, v := range s.listeners {
 		// create listener
@@ -140,30 +143,36 @@ func (s *Server) listen() (err error) {
 }
 
 // Get a listener by index
-func (s *Server) GetListener(n int) net.Listener {
+func (s *System) GetListener(n int) net.Listener {
 	if len(s.listeners)-1 < n {
 		return nil
 	}
 	return s.listeners[n].listener
 }
 
-func (s *Server) NListeners() int {
+func (s *System) NListeners() int {
 	return len(s.listeners)
 }
 
 // New diamond system, listening at specified socket.
-func New(socket string) (*Server, error) {
+func New(socket string) (*System, error) {
+	// does the socket already exist?
 	_, err := os.Stat(socket)
 	if err == nil {
+		// try to KICK. first, create client
 		client, err := NewClient(socket)
 		if err != nil {
 			return nil, fmt.Errorf("socket already exists and client could not be created: %v", err)
 		}
+
+		// send the KICK command
 		var resp string
 		resp, err = client.Send("KICK")
 		if err != nil {
 			return nil, fmt.Errorf("socket already exists and server isnt responding, delete if you want (error %v)", err)
 		}
+
+		// if it works, we get OKAY
 		if resp != "OKAY" {
 			return nil, fmt.Errorf("socket already exists and server responeded with: %q", resp)
 		}
@@ -177,16 +186,17 @@ func New(socket string) (*Server, error) {
 		}
 	}
 
-	srv := &Server{
+	srv := &System{
 		Config:        &Options{},
 		Log:           log.New(os.Stderr, "[diamond] ", 0),
 		listeners:     nil,
 		controlSocket: socket,
 		runlevels:     make(map[int]RunlevelFunc),
 		done:          make(chan int, 1),
-		httpmux:       http.NewServeMux(),
 	}
-
+	srv.Server = &http.Server{
+		ConnState: srv.connState,
+	}
 	// create and start listening on socket
 	err = srv.listenControlSocket()
 	if err != nil {
@@ -196,13 +206,13 @@ func New(socket string) (*Server, error) {
 	return srv, nil
 }
 
-func (s *Server) SetRunlevel(level int, fn RunlevelFunc) {
+func (s *System) SetRunlevel(level int, fn RunlevelFunc) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	s.runlevels[level] = fn
 }
 
-func (s *Server) GetRunlevel() int {
+func (s *System) GetRunlevel() int {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	return s.level
@@ -210,7 +220,7 @@ func (s *Server) GetRunlevel() int {
 
 // Runlevel switches gears, into the specified level.
 // func main() typically should os.Exit(0) some time after s.Wait()
-func (s *Server) Runlevel(level int) (err error) {
+func (s *System) Runlevel(level int) (err error) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	if s.level == level {
@@ -251,7 +261,7 @@ func (s *Server) Runlevel(level int) (err error) {
 	return fmt.Errorf(`runlevel "%v" seems not to exist`, level)
 }
 
-func (s *Server) listenControlSocket() error {
+func (s *System) listenControlSocket() error {
 	path := s.controlSocket
 	if err := os.MkdirAll(filepath.Dir(path), CHMODDIR); err != nil {
 		return fmt.Errorf("diamond: Could not create service path")
@@ -271,11 +281,11 @@ func (s *Server) listenControlSocket() error {
 		for {
 			e := s.socketAccept()
 			if e != nil {
-				s.Log.Printf("ADMIN SOCKET %s", e.Error())
-				return
+				s.Log.Printf("FATAL ADMIN SOCKET %s", e.Error())
+				continue
 			}
 			if s.Config.Verbose {
-				s.Log.Printf("Admin Socket Connection: %s", time.Now().Format(time.Kitchen))
+				s.Log.Printf("Admin Socket Connection Completed: %s", time.Now().Format(time.Kitchen))
 			}
 
 		}
@@ -284,7 +294,7 @@ func (s *Server) listenControlSocket() error {
 }
 
 // socketAccept one connection on unix socket, offering public methods on the 'packet' type
-func (s *Server) socketAccept() error {
+func (s *System) socketAccept() error {
 	conn, err := s.controlListener.Accept()
 	if err != nil {
 		if strings.Contains(err.Error(), "use of closed network connection") {
@@ -292,6 +302,7 @@ func (s *Server) socketAccept() error {
 		}
 		return fmt.Errorf("diamond: Could not accept connection: %v", err)
 	}
+	s.Log.Println("Received connection", time.Now().Format(time.Kitchen))
 	rcpServer := rpc.NewServer()
 	var pack = new(packet)
 	pack.parent = s
@@ -311,6 +322,6 @@ func (s *Server) socketAccept() error {
 }
 
 // Wait until runlevel 0 is finished (after running custom RunlevelFunc 0 and socket is removed)
-func (s *Server) Wait() {
+func (s *System) Wait() {
 	<-s.done
 }

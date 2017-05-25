@@ -67,16 +67,18 @@ func TestOpenCloseListeners(t *testing.T) {
 		listener{ltype: "unix", laddr: testsocket},
 	}
 	for _, v := range testlisteners {
+		srv.Log.Println("AddListener", v.ltype, v.laddr)
+
 		n, err := srv.AddListener(v.ltype, v.laddr)
 		if err != nil {
-			t.Log(n, "listeners", err)
+			srv.Log.Println(n, "listeners", err)
 			t.FailNow()
 		}
 		t.Log(n, "listeners")
 	}
 	srv.SetHandler(foohandler)
 	srv.Runlevel(1)
-	// test that we cant connect
+	srv.Log.Println("test that we cant connect")
 	for _, v := range testlisteners {
 		u := "http://" + v.laddr + "/"
 		if v.ltype == "unix" {
@@ -91,13 +93,15 @@ func TestOpenCloseListeners(t *testing.T) {
 				t.Log(err)
 			}
 			println(string(b))
-			t.Log("wanted error, got response")
+			srv.Log.Println("wanted error, got response")
 			t.FailNow()
 		}
-		//	t.Log("got expected error:", err)
+
+		srv.Log.Println("got expected error:", err)
 	}
 	srv.Runlevel(3)
 	// test we can connect
+	srv.Log.Println("test that we can connect")
 	for _, v := range testlisteners {
 
 		u := "http://" + v.laddr + "/"
@@ -127,25 +131,28 @@ func TestOpenCloseListeners(t *testing.T) {
 	}
 
 	srv.Runlevel(1)
-	// test we cant connect again after downshift
+	<-time.After(time.Second)
+	// test we cant tconnect again after downshift
+	srv.Log.Println("test that we cant connect again**")
 	for _, v := range testlisteners {
 		u := "http://" + v.laddr + "/"
 		if v.ltype == "unix" {
 			u = httpunix.Scheme + "://" + v.laddr + "/"
 		}
+		srv.Log.Printf("testing: %q %q", v.laddr, v.ltype)
 		resp, err := testclient.Get(u)
-
 		if err == nil {
-			log.Println(err)
-			t.Fail()
 			defer resp.Body.Close()
 			b, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Println(err)
+				srv.Log.Println(err)
 			}
-			t.Log("wanted error, got", string(b))
+			srv.Log.Println("wanted connection-type error, got http response", string(b))
+			srv.Log.Println(v.laddr, v.ltype, u)
+			t.FailNow()
+
 		} else {
-			t.Log("got expected error:", err)
+			srv.Log.Println("got expected error:", err)
 		}
 	}
 
