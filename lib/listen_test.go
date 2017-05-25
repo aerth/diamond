@@ -131,7 +131,6 @@ func TestOpenCloseListeners(t *testing.T) {
 	}
 
 	srv.Runlevel(1)
-	<-time.After(time.Second)
 	// test we cant tconnect again after downshift
 	srv.Log.Println("test that we cant connect again**")
 	for _, v := range testlisteners {
