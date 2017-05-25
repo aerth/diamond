@@ -60,6 +60,7 @@ var foohandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 func TestOpenCloseListeners(t *testing.T) {
 	srv, _ := createTestServer(t)
+	srv.Log.SetFlags(log.Lshortfile)
 	testlisteners := []listener{
 		listener{ltype: "tcp", laddr: "127.0.0.1:30001"},
 		listener{ltype: "tcp", laddr: "127.0.0.1:30002"},
@@ -143,9 +144,9 @@ func TestOpenCloseListeners(t *testing.T) {
 				log.Println(err)
 			}
 			t.Log("wanted error, got", string(b))
-			t.FailNow()
+		} else {
+			t.Log("got expected error:", err)
 		}
-		t.Log("got expected error:", err)
 	}
 
 }
