@@ -32,7 +32,6 @@ import (
 	"net/rpc"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
@@ -297,9 +296,6 @@ func (s *System) listenControlSocket() error {
 func (s *System) socketAccept() error {
 	conn, err := s.controlListener.Accept()
 	if err != nil {
-		if strings.Contains(err.Error(), "use of closed network connection") {
-			return fmt.Errorf("closed properly")
-		}
 		return fmt.Errorf("diamond: Could not accept connection: %v", err)
 	}
 	s.Log.Println("Received connection", time.Now().Format(time.Kitchen))
