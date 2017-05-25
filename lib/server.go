@@ -45,16 +45,30 @@ var CHMODFILE os.FileMode = 0770
 
 // Server listens on control socket, controlling listeners and runlevels
 type Server struct {
-	Config          *Options
+
+	// Config can be configured
+	Config *Options
+
+	// Log can be redirected
 	Log             *log.Logger
-	listeners       []net.Listener
+	listeners       []*listener
 	controlSocket   string // path to socket
 	controlListener net.Listener
-	runlevels       map[int]RunlevelFunc
-	level           int
-	locklevel       sync.Mutex
-	done            chan int
-	httpmux         http.Handler
+	runlevels       map[int]RunlevelFunc // map[int](func() error)
+	level           int                  // current runlevel
+	locklevel       sync.Mutex           // runlevel lock only for shifting runlevels
+	done            chan int             // end
+	httpmux         http.Handler         // has ServeHTTP(w,r) method
+}
+
+type listener struct {
+	ltype    string
+	laddr    string
+	listener net.Listener
+}
+
+func (l listener) String() string {
+	return l.laddr
 }
 
 // RunlevelFunc is any function with no arguments that returns an error
@@ -92,16 +106,49 @@ func (s *Server) SetHandler(h http.Handler) {
 }
 
 // AddListener to the list of listeners, returning the
-func (s *Server) AddListener(l net.Listener) (n int, err error) {
+func (s *Server) AddListener(ltype, laddr string) (n int, err error) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
 	if s.level > 1 {
 		n = len(s.listeners)
-		return n, fmt.Errorf("already listening on %v listeners", n)
+		return n, fmt.Errorf("already listening on %v listeners, enter runlevel 1 first", n)
 	}
+	l := new(listener)
+	l.ltype = ltype
+	l.laddr = laddr
 	s.listeners = append(s.listeners, l)
 	n = len(s.listeners)
 	return n, nil
+
+}
+
+func (s *Server) listen() (err error) {
+	var errors []error
+	for i, v := range s.listeners {
+		// create listener
+		s.listeners[i].listener, err = net.Listen(v.ltype, v.laddr)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("could not create listener: %v", err))
+		}
+
+		if len(errors) == 0 {
+			return nil
+		}
+
+	}
+	return fmt.Errorf(fmt.Sprintln(errors))
+}
+
+// Get a listener by index
+func (s *Server) GetListener(n int) net.Listener {
+	if len(s.listeners)-1 < n {
+		return nil
+	}
+	return s.listeners[n].listener
+}
+
+func (s *Server) NListeners() int {
+	return len(s.listeners)
 }
 
 // New diamond system, listening at specified socket.
@@ -161,30 +208,47 @@ func (s *Server) GetRunlevel() int {
 	return s.level
 }
 
-func (s *Server) Runlevel(level int) error {
+// Runlevel switches gears, into the specified level.
+// func main() typically should os.Exit(0) some time after s.Wait()
+func (s *Server) Runlevel(level int) (err error) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
+	if s.level == level {
+		return fmt.Errorf("already in runlevel %v", level)
+	}
+	if fn, ok := s.runlevels[level]; ok {
+		err = fn()
+		if err != nil {
+			return fmt.Errorf("still in runlevel %v, could not switch to %v (%v)", s.level, level, err)
 
+		}
+		s.level = level
+	}
 	switch level {
 	default:
 	case 0:
 		// remove socket file
-		if e := os.Remove(s.controlSocket); e != nil {
-			s.Log.Println(e)
-		}
-	}
-
-	if fn, ok := s.runlevels[level]; ok {
-		err := fn()
+		err = os.Remove(s.controlSocket)
 		if err != nil {
+			s.Log.Println(err)
+			s.done <- 111
 			return err
 		}
-		s.level = level
+		s.done <- 0
 		return nil
-
+	case 1:
+		// close all connection (TCP or http unix socket)
+		return s.closelisteners()
+	case 3:
+		// open all listeners (TCP or http unix socket)
+		return s.openlisteners()
 	}
 
-	return fmt.Errorf(`runlevel "%v" does not exist`, level)
+	if s.level == level {
+		return nil
+	}
+
+	return fmt.Errorf(`runlevel "%v" seems not to exist`, level)
 }
 
 func (s *Server) listenControlSocket() error {
@@ -219,7 +283,7 @@ func (s *Server) listenControlSocket() error {
 	return nil
 }
 
-// socketAccept one connection on unix socket, send to Packet processor
+// socketAccept one connection on unix socket, offering public methods on the 'packet' type
 func (s *Server) socketAccept() error {
 	conn, err := s.controlListener.Accept()
 	if err != nil {
@@ -246,6 +310,7 @@ func (s *Server) socketAccept() error {
 	return nil
 }
 
+// Wait until runlevel 0 is finished (after running custom RunlevelFunc 0 and socket is removed)
 func (s *Server) Wait() {
 	<-s.done
 }

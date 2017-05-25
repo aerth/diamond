@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,28 +70,16 @@ func main() {
 	// setup
 	catchSignals(srv)
 	srv.Config.Verbose = true
+	srv.Config.Kicks = true
+	srv.Config.Kickable = true
 	srv.SetRunlevel(0, runlevel0)
 	srv.SetRunlevel(1, runlevel1)
 	srv.SetRunlevel(3, foo.runlevel3)
 
 	// Add listeners
-	// Listen on TCP port 2000 on all interfaces.
-	l1, err := net.Listen("tcp", ":2000")
-	if err != nil {
-		srv.Log.Println(err)
-		srv.Runlevel(0)
-		return
-	}
-	l2, err := net.Listen("unix", "web.socket")
-	if err != nil {
-		srv.Log.Println(err)
-		srv.Runlevel(0)
-		return
-	}
-
-	// diamond will close listener
-	srv.AddListener(l1)
-	srv.AddListener(l2)
+	// Listen on TCP port 2000 on 127.0.0.1
+	srv.AddListener("tcp", "127.0.0.1:2000")
+	srv.AddListener("unix", "sample.socket")
 	srv.SetHandler(foo)
 	// begin
 	err = srv.Runlevel(1)

@@ -51,13 +51,13 @@ func (p *packet) Echo(arg string, reply *string) error {
 
 func (p *packet) Kick(arg string, reply *string) error {
 	p.parent.Log.Println(time.Now(), "Kick", arg)
-	if !p.parent.Config.Kickable {
-		*reply = "NOWAY"
-		return fmt.Errorf("NOWAY")
+	if p.parent.Config.Kickable {
+		*reply = "OKAY"
+		p.parent.Runlevel(0)
+		return nil
 	}
-	*reply = "OKAY"
-	p.parent.Runlevel(0)
-	return nil
+	*reply = "NOWAY"
+	return fmt.Errorf("NOWAY")
 }
 
 func (p *packet) KICK(arg string, reply *string) error {
