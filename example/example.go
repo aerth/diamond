@@ -11,8 +11,8 @@ import (
 	diamond "github.com/aerth/diamond/lib"
 )
 
-func catchSignals(s *diamond.Server) {
-	go func(srv *diamond.Server) {
+func catchSignals(s *diamond.System) {
+	go func(srv *diamond.System) {
 		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGHUP, syscall.SIGQUIT)
 		select {
