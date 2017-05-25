@@ -318,6 +318,6 @@ func (s *System) socketAccept() error {
 }
 
 // Wait until runlevel 0 is finished (after running custom RunlevelFunc 0 and socket is removed)
-func (s *System) Wait() {
-	<-s.done
+func (s *System) Wait() int {
+	return <-s.done
 }
