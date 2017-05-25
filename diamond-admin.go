@@ -125,9 +125,9 @@ func handleMenuInput(mm *clix.MenuBar, ev *clix.EventHandler) (cmd string) {
 		case "Check Server Status":
 			cmd = cmdStatus
 		case "Single User Mode":
-			cmd = "telinit 1"
+			cmd = "runlevel 1"
 		case "Multi User Mode":
-			cmd = "telinit 3"
+			cmd = "runlevel 3"
 		case "Redeploy Server":
 			cmd = cmdRedeploy
 		default: // custom command
@@ -172,9 +172,8 @@ func buildClient() *diamond.Client {
 	return client
 }
 
-var buf = new(bytes.Buffer)
-
 func doCUI(socketpath string) {
+	var buf = new(bytes.Buffer)
 	client := buildClient()
 	mm := buildWindow()
 	buildMenu(mm)
