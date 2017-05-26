@@ -8,30 +8,43 @@ import (
 )
 
 func (s *System) closelisteners() error {
-	var errors = []error{}
-	for i := range s.listeners {
-
-		// close listener if exists
-		if s.listeners[i].listener != nil {
-			s.Log.Println("closing listener:", s.listeners[i].String())
-			err := s.listeners[i].listener.Close()
+	var errors = make(chan error, len(s.listeners))
+	var nl int = len(s.listeners)
+	for i := 0; i < nl; i++ {
+		s.Log.Println("closing listener:", s.listeners[i].String())
+		go func(name string, listener net.Listener) {
+			// close listener if exists
+			if listener == nil {
+				errors <- nil
+				return
+			}
+			err := listener.Close()
 			if err != nil {
 				// log error while its easy
-
 				if estring := err.Error(); !strings.Contains(estring, "use of closed") {
-					s.Log.Println("error closing", s.listeners[i].String()+":", err)
-					errors = append(errors, err)
+					errors <- err
+					return
 				}
 			}
-			/* if s.listeners[i].ltype == "unix" {
-				err := os.Remove(s.listeners[i].laddr)
-				if err != nil {
-					s.Log.Println("error removing socket", err)
-				}
-			} */
+			errors <- nil
+
+		}(s.listeners[i].String(), s.listeners[i].listener)
+
+	}
+	var nerr = 0
+	for i := 0; i < nl; i++ {
+		select {
+		case err := <-errors:
+			if err == nil {
+				continue
+			}
+
+			s.Log.Println(err)
+			nerr++
 		}
 	}
-	if len(errors) == 0 {
+
+	if nerr == 0 {
 		return nil
 	}
 
@@ -94,11 +107,17 @@ func (s *System) connState(c net.Conn, state http.ConnState) {
 		//	<-time.After(durationactive)
 		//	s.counters.Down("active")
 		//}()
-		c.Close() // dont wait around to close a connection
+		e := c.Close() // dont wait around to close a connection
+		if e != nil {
+			s.Log.Println(e)
+		}
 	case http.StateIdle:
-		c.Close() // dont wait around for stale clients to close a connection
+		e := c.Close() // dont wait around for stale clients to close a connection
+		if e != nil {
+			s.Log.Println(e)
+		}
 	case http.StateNew:
 	default:
-		s.Log.Println("Got new state:", state.String())
+		s.Log.Println("Got new alien state:", state.String())
 	}
 }
