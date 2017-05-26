@@ -111,6 +111,9 @@ func (s *System) SetHandler(h http.Handler) error {
 
 // AddListener to the list of listeners, returning the
 func (s *System) AddListener(ltype, laddr string) (n int, err error) {
+	if ltype == "" || laddr == "" {
+		return len(s.listeners), fmt.Errorf("Empty argument: %q %q", ltype, laddr)
+	}
 	if s.level > 1 {
 		n = len(s.listeners)
 		return n, fmt.Errorf("already listening on %v listeners, enter runlevel 1 first", n)
@@ -222,6 +225,11 @@ func (s *System) GetRunlevel() int {
 func (s *System) Runlevel(level int) (err error) {
 	s.locklevel.Lock()
 	defer s.locklevel.Unlock()
+	if s.level == 0 && level != 1 {
+		if e := s.closelisteners(); e != nil {
+			return e
+		}
+	}
 	if s.level == level {
 		return fmt.Errorf("already in runlevel %v", level)
 	}
@@ -229,14 +237,25 @@ func (s *System) Runlevel(level int) (err error) {
 		err = fn()
 		if err != nil {
 			return fmt.Errorf("still in runlevel %v, could not switch to %v (%v)", s.level, level, err)
-
 		}
+
 		s.level = level
 	}
 	switch level {
 	default:
 	case 0:
-		// remove socket file
+		// remove listener sockets if exists
+		for _, v := range s.listeners {
+			if v.ltype == "unix" {
+				s.Log.Println("removing http socket:", v.laddr)
+				if e := os.Remove(v.laddr); e != nil {
+					s.Log.Printf("error removing socket: %v", e)
+				}
+			}
+		}
+
+		// remove control socket file
+		s.Log.Println("removing socket")
 		err = os.Remove(s.controlSocket)
 		if err != nil {
 			s.Log.Println(err)
