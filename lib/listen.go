@@ -13,14 +13,12 @@ func (s *System) closelisteners() error {
 	for i := 0; i < nl; i++ {
 		s.Log.Println("closing listener:", s.listeners[i].String())
 		go func(name string, listener net.Listener) {
-			// close listener if exists
 			if listener == nil {
 				errors <- nil
 				return
 			}
 			err := listener.Close()
 			if err != nil {
-				// log error while its easy
 				if estring := err.Error(); !strings.Contains(estring, "use of closed") {
 					errors <- err
 					return
@@ -44,7 +42,7 @@ func (s *System) closelisteners() error {
 		}
 	}
 
-	if nerr == 0 {
+	if nerr == 0 || s.Config.Force {
 		return nil
 	}
 
@@ -86,11 +84,12 @@ func (s *System) openlisteners() error {
 
 		}
 	}
-	// any number of errors is an error
-	if len(errors) != 0 {
-		return fmt.Errorf("%v errors, check log for details.", len(errors))
+
+	if len(errors) == 0 || s.Config.Force {
+		return nil
 	}
-	return nil
+	// any number of errors is an error
+	return fmt.Errorf("%v errors, check log for details.", len(errors))
 }
 
 // ConnState closes idle connections, while counting  active connections

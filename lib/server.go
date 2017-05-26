@@ -83,8 +83,8 @@ type Options struct {
 	// Able to be KICKed via control socket (same as command 'runlevel 0')
 	Kickable bool
 
-	// Will KICK if control socket exists at boot time, replacing socket
-	Kicks bool
+	// Force runlevel mode, regardless of errors
+	Force bool
 }
 
 // NewServer returns a new server, and an error if the socket path is not valid
