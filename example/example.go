@@ -70,7 +70,6 @@ func main() {
 	// setup
 	catchSignals(srv)
 	srv.Config.Verbose = true
-	srv.Config.Kicks = true
 	srv.Config.Kickable = true
 	srv.SetRunlevel(0, runlevel0)
 	srv.SetRunlevel(1, runlevel1)
