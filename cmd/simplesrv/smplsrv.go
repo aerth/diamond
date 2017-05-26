@@ -32,18 +32,13 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir(os.Args[1])))
-	s, err := diamond.NewServer(mux, "smplsrv.control")
+	s, err := diamond.NewServer(mux, socket)
 	if err != nil {
 		log.Println(err)
 		os.Exit(111)
 	}
-
+	s.Config.Kickable = true
 	_, err = s.AddListener("tcp", ":"+port)
-	if err != nil {
-		s.Log.Println(err)
-		os.Exit(111)
-	}
-	_, err = s.AddListener("unix", socket)
 	if err != nil {
 		s.Log.Println(err)
 		os.Exit(111)
