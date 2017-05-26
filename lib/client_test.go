@@ -43,12 +43,11 @@ func TestClient(t *testing.T) {
 	os.Remove(socket.Name())
 	defer os.Remove(socket.Name()) // isnt created yet
 	println("Creating Server")
-	srv, err := New(socket.Name())
+	_, err = New(socket.Name())
 	if err != nil {
 		t.Logf("tried to create socket %q, got error: %v", socket.Name(), err)
 		t.FailNow()
 	}
-	_ = srv // i know
 
 	println("Creating Client")
 	client, err := NewClient(socket.Name())

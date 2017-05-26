@@ -63,9 +63,9 @@ func TestOpenCloseListeners(t *testing.T) {
 	srv, _ := createTestServer(t)
 	srv.Log.SetFlags(log.Lshortfile)
 	testlisteners := [100]listener{
-		listener{ltype: "tcp", laddr: "127.0.0.1:30000"},
-		listener{ltype: "tcp", laddr: "127.0.0.1:30001"},
-		listener{ltype: "unix", laddr: testsocket},
+		{ltype: "tcp", laddr: "127.0.0.1:30000"},
+		{ltype: "tcp", laddr: "127.0.0.1:30001"},
+		{ltype: "unix", laddr: testsocket},
 	}
 	// 30003..30099 now have 99 listeners
 	for i := 2; i < 100; i++ {
