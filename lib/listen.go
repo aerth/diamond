@@ -44,9 +44,11 @@ func (s *System) openlisteners() error {
 	// open listener
 	for i := range s.listeners {
 		s.Log.Printf("opening %q listener on %q", s.listeners[i].ltype, s.listeners[i].laddr)
-		switch s.listeners[i].ltype {
+		str := s.listeners[i].ltype
+		switch str {
 		default:
-			panic("wtf")
+			s.Log.Println(str)
+			panic("Listener type incorrect: tcp, unix, tls, got:" + s.listeners[i].ltype)
 		// tls
 		case "tls":
 			panic("no tls, sorry")
@@ -54,7 +56,6 @@ func (s *System) openlisteners() error {
 		case "tcp", "unix":
 			l, err := net.Listen(s.listeners[i].ltype, s.listeners[i].laddr)
 			if err != nil {
-				panic(err)
 				s.Log.Printf("error opening %s (%s): %v", s.listeners[i].laddr, s.listeners[i].ltype, err)
 				errors = append(errors, err)
 			} else {

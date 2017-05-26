@@ -25,6 +25,7 @@
 package diamond
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -61,12 +62,21 @@ var foohandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 func TestOpenCloseListeners(t *testing.T) {
 	srv, _ := createTestServer(t)
 	srv.Log.SetFlags(log.Lshortfile)
-	testlisteners := []listener{
+	testlisteners := [99]listener{
 		listener{ltype: "tcp", laddr: "127.0.0.1:30001"},
 		listener{ltype: "tcp", laddr: "127.0.0.1:30002"},
 		listener{ltype: "unix", laddr: testsocket},
 	}
+	for i := 3; i < 99; i++ {
+		testlisteners[i] = listener{
+			ltype: "tcp",
+			laddr: "127.0.0.1:200" + fmt.Sprintf("%0v", i),
+		}
+	}
 	for _, v := range testlisteners {
+		if v.ltype == "" || v.laddr == "" {
+			continue
+		}
 		srv.Log.Println("AddListener", v.ltype, v.laddr)
 
 		n, err := srv.AddListener(v.ltype, v.laddr)
@@ -77,7 +87,11 @@ func TestOpenCloseListeners(t *testing.T) {
 		t.Log(n, "listeners")
 	}
 	srv.SetHandler(foohandler)
-	srv.Runlevel(1)
+	err := srv.Runlevel(1)
+	if err != nil {
+		srv.Log.Println(err)
+		t.FailNow()
+	}
 	srv.Log.Println("test that we cant connect")
 	for _, v := range testlisteners {
 		u := "http://" + v.laddr + "/"
@@ -148,6 +162,7 @@ func TestOpenCloseListeners(t *testing.T) {
 			}
 			srv.Log.Println("wanted connection-type error, got http response", string(b))
 			srv.Log.Println(v.laddr, v.ltype, u)
+			t.Log("failing!")
 			t.FailNow()
 
 		} else {
