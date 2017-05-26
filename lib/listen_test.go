@@ -62,15 +62,16 @@ var foohandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 func TestOpenCloseListeners(t *testing.T) {
 	srv, _ := createTestServer(t)
 	srv.Log.SetFlags(log.Lshortfile)
-	testlisteners := [99]listener{
+	testlisteners := [100]listener{
+		listener{ltype: "tcp", laddr: "127.0.0.1:30000"},
 		listener{ltype: "tcp", laddr: "127.0.0.1:30001"},
-		listener{ltype: "tcp", laddr: "127.0.0.1:30002"},
 		listener{ltype: "unix", laddr: testsocket},
 	}
-	for i := 3; i < 99; i++ {
+	// 30003..30099 now have 99 listeners
+	for i := 2; i < 100; i++ {
 		testlisteners[i] = listener{
 			ltype: "tcp",
-			laddr: "127.0.0.1:200" + fmt.Sprintf("%0v", i),
+			laddr: "127.0.0.1:300" + fmt.Sprintf("%0v", i),
 		}
 	}
 	for _, v := range testlisteners {
@@ -84,7 +85,6 @@ func TestOpenCloseListeners(t *testing.T) {
 			srv.Log.Println(n, "listeners", err)
 			t.FailNow()
 		}
-		t.Log(n, "listeners")
 	}
 	srv.SetHandler(foohandler)
 	err := srv.Runlevel(1)
