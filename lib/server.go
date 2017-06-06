@@ -182,9 +182,11 @@ func New(socket string) (*System, error) {
 		// response was OKAY, no errors.
 		// this means we kicked the old server, and the socket *should* be removed.
 		// lets force remove the socket and continue as usual ;)
-		err = os.Remove(socket)
-		if err != nil {
-			return nil, fmt.Errorf("socket already exists and could not be removed: %q", err)
+		if _, err := os.Stat(socket); err == nil {
+			err = os.Remove(socket)
+			if err != nil {
+				return nil, fmt.Errorf("socket already exists and could not be removed: %q", err)
+			}
 		}
 	}
 
