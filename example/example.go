@@ -1,5 +1,8 @@
 // +build ignore
 
+// Warning: this is old diamond api and will be removed soon.
+// Consider changing import paths to gopkg.in or using go modules to stay on v0.2.0 or below
+
 package main
 
 import (
