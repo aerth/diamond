@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 
 	"github.com/aerth/diamond"
@@ -14,28 +13,18 @@ import (
 func myHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "hello from diamond example, we must be in runlevel 3 or 4!")
 }
+
+type h = http.HandlerFunc
+
 func main() {
 	s, err := diamond.New("deleteme.socket", new(Thing))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	s.HookLevel3 = func() []net.Listener {
-		log.Println("LEVEL 3")
-		var listeners []net.Listener
-		for _, v := range []string{":8080", ":8081"} {
-			log.Println("3: listening on", v)
-			l, err := net.Listen("tcp", v)
-			if err != nil {
-				log.Println("error adding listener:", err)
-				continue
-			}
-			log.Println("3: httpd on", v)
-			go func() { log.Println(http.Serve(l, http.HandlerFunc(myHandler))) }()
-			listeners = append(listeners, l)
-		}
-		return listeners
-	}
-	s.HookLevel4 = nil
+	s.AddHTTPHandler(":8080", h(myHandler))
+	s.AddHTTPHandler(":8081", h(myHandler))
+	s.AddHTTPHandler(":8082", h(myHandler))
+	s.Runlevel(3)
 	log.Fatalln(s.Wait())
 }
 
