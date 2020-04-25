@@ -34,6 +34,27 @@ diamond-admin -s diamond.sock RUNLEVEL 1
 
 Diamond requires a recent version of Go
 
+```
+
+// New creates a new admin socket and starts listening for commands
+s, err := diamond.New("/tmp/diamond.socket")
+if err != nil {
+	log.Fatalln(err)
+}
+s.AddHTTPHandler(":8080", http.HandlerFunc(myHandler))
+s.AddHTTPHandler(":8081", http.HandlerFunc(handler2))
+s.AddHTTPHandler(":8082", handler3)
+
+
+// start in multiuser mode, serving http
+// without calling Runlevel(3) you must
+// connect via socket and issue the RUNLEVEL 3 command
+s.Runlevel(3) 
+
+// serve forever
+log.Fatalln(s.Wait())
+```
+
 See the [examples](example)
 
 Read more:
