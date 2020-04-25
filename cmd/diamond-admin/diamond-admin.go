@@ -209,9 +209,7 @@ func doCUI(socketpath string) {
 
 			buf.WriteString("REPLY: " + msg + "\n")
 			if resperr != nil {
-				mm.GetScreen().Fini()
-				println(resperr.Error())
-				os.Exit(111)
+				msg = resperr.Error()
 			}
 		}
 		mm.GetScreen().Show()
