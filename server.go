@@ -32,12 +32,19 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/rpc"
 	"os"
 	"os/signal"
 	"reflect"
 	"strings"
 	"syscall"
+	"time"
+)
+
+const (
+	SINGLEUSER = 1
+	MULTIUSER  = 3
 )
 
 // Server  ...
@@ -47,6 +54,17 @@ type Server struct {
 	fns        []interface{}
 	r          *rpc.Server
 	quit       chan error
+	listeners  []net.Listener // to suspend during lower runlevels
+	runlevel   int
+	HookLevel3 func() []net.Listener
+	HookLevel4 func() []net.Listener
+	cleanup    func() error
+	httpPairs  []httpPair
+}
+
+type httpPair struct {
+	Addr string
+	H    http.Handler
 }
 
 // New creates a new Server, with a socket at socketpath, and starts listening.
@@ -68,6 +86,9 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		socketname: socketpath,
 		fns:        fnPointers,
 		quit:       make(chan error),
+		cleanup: func() error {
+			return os.Remove(socketpath)
+		},
 	}
 
 	r := rpc.NewServer()
@@ -108,6 +129,18 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 	return s, nil
 }
 
+// AddListener listeners can only shutdown a port, not restart, returns total number of listeners (for shutdown)
+func (s *Server) AddListener(l net.Listener) int {
+	s.listeners = append(s.listeners, l)
+	return len(s.listeners)
+}
+
+// AddHTTPHandler can restart, returns how many http handlers will be used (for shutdown and restarts)
+func (s *Server) AddHTTPHandler(addr string, h http.Handler) int {
+	s.httpPairs = append(s.httpPairs, httpPair{addr, h})
+	return len(s.httpPairs)
+}
+
 // Wait can be called to wait for the program to finish and remove the socket file.
 // It is not necessary to call Wait() if your program catches signals
 // and cleans up the socket file on it's own.
@@ -134,6 +167,41 @@ func (s *Server) handleConn(conn net.Conn) {
 	conn.Close()
 }
 
+func (s *Server) Runlevel(level int) error {
+	if level != 3 {
+		panic("can only set Runlevel 3 from go (for now)")
+	}
+	if s.HookLevel3 == nil && len(s.httpPairs) == 0 {
+		panic("cant runlevel 3 with no listeners and no HookLevel3()")
+	}
+	var listeners []net.Listener
+	if s.HookLevel3 != nil {
+		listeners = s.HookLevel3()
+	}
+	for i := range s.httpPairs {
+		l, err := net.Listen("tcp", s.httpPairs[i].Addr)
+		if err != nil {
+			log.Println("error listening:", err)
+			continue
+		}
+		listeners = append(listeners, l)
+		handler := &http.Server{
+			Handler:        s.httpPairs[i].H,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+			IdleTimeout:    time.Second,
+		}
+		go func(l net.Listener, srv *http.Server) {
+			log.Println(srv.Serve(l))
+		}(l, handler)
+	}
+	s.listeners = append(s.listeners, listeners...)
+	log.Printf("new listeners: %d, total listeners: %d", len(listeners), len(s.listeners))
+	s.runlevel = 3
+	return nil
+}
+
 type packet struct {
 	parent *Server
 }
@@ -142,4 +210,88 @@ func (p *packet) HELLO(arg string, reply *string) error {
 	log.Printf("HELLO: %q", arg)
 	*reply = "HELLO from Diamond Socket"
 	return nil
+}
+
+func (p *packet) RUNLEVEL(level string, reply *string) error {
+	if len(level) != 1 {
+		*reply = "need runlevel to switch to (digit)"
+		return nil
+	}
+	if fmt.Sprintf("%d", p.parent.runlevel) == level {
+		*reply = "already"
+		return nil
+	}
+
+	str := "Switching to runlevel " + level
+
+	switch level {
+	case "0":
+		for i := range p.parent.listeners {
+			if err := p.parent.listeners[i].Close(); err != nil {
+				log.Printf("error closing listener %d: %v", i, err)
+			}
+		}
+		if err := p.parent.cleanup(); err != nil {
+			log.Println(str, err)
+		}
+		p.parent.runlevel = 0
+		os.Exit(0)
+	case "1":
+		for i := range p.parent.listeners {
+			if err := p.parent.listeners[i].Close(); err != nil {
+				log.Printf("error closing listener %d: %v", i, err)
+			}
+		}
+		p.parent.listeners = nil
+		p.parent.runlevel = 1
+		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
+		return nil
+	case "2", "3":
+		if p.parent.HookLevel3 == nil && len(p.parent.httpPairs) == 0 {
+			*reply = "no level 3"
+			return nil
+		}
+		var listeners []net.Listener
+		if p.parent.HookLevel3 != nil {
+			listeners = p.parent.HookLevel3()
+		}
+		for i := range p.parent.httpPairs {
+			l, err := net.Listen("tcp", p.parent.httpPairs[i].Addr)
+			if err != nil {
+				log.Println("error listening:", err)
+				continue
+			}
+			listeners = append(listeners, l)
+			handler := &http.Server{
+				Handler:        p.parent.httpPairs[i].H,
+				ReadTimeout:    10 * time.Second,
+				WriteTimeout:   10 * time.Second,
+				MaxHeaderBytes: 1 << 20,
+				IdleTimeout:    time.Second,
+			}
+			go func(l net.Listener, srv *http.Server) {
+				log.Println(srv.Serve(l))
+			}(l, handler)
+		}
+		p.parent.listeners = append(p.parent.listeners, listeners...)
+		log.Printf("new listeners: %d, total listeners: %d", len(listeners), len(p.parent.listeners))
+		p.parent.runlevel = 3
+		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
+		return nil
+	case "4":
+		if p.parent.HookLevel4 == nil {
+			*reply = "no level 4"
+			return nil
+		}
+		p.parent.listeners = append(p.parent.listeners, p.parent.HookLevel4()...)
+		p.parent.runlevel = 4
+		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
+		return nil
+	default:
+		log.Println("invalid arg:", level)
+		return nil
+	}
+
+	return nil
+
 }
