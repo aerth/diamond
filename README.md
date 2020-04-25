@@ -39,12 +39,15 @@ Diamond requires a recent version of Go
 // New creates a new admin socket and starts listening for commands
 s, err := diamond.New("/tmp/diamond.socket")
 if err != nil {
-	log.Fatalln(err)
+    log.Fatalln(err)
 }
+
+// Add variety of http handlers and their addr to listen on
+// They won't start listening right away, so they could be
+// occupied by other servers
 s.AddHTTPHandler(":8080", http.HandlerFunc(myHandler))
 s.AddHTTPHandler(":8081", http.HandlerFunc(handler2))
 s.AddHTTPHandler(":8082", handler3)
-
 
 // start in multiuser mode, serving http
 // without calling Runlevel(3) you must
