@@ -2,28 +2,37 @@
 
 ### Runlevels for your web application
 
-:zap: ```telinit 4```
+:zap: ```telinit 3```
 
 [![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
 [![Build Status](https://travis-ci.org/aerth/diamond.svg?branch=master)](https://travis-ci.org/aerth/diamond)
 
 ![Screenshot diamond-admin CUI](https://github.com/aerth/diamond/blob/master/docs/diamond-screenshot.png?raw=true)
 
+
+# Using diamond-admin
+
 You can open admin interface by using no arguments:
+
 ```
 diamond-admin -s diamond.sock
 ```
 
-Or use in scripts:
+### Start all listeners and http servers
+
 ```
-diamond-admin -s diamond.sock telinit 3
-Command: telinit 3
-DONE: telinit 3
+diamond-admin -s diamond.sock RUNLEVEL 3
+```
+
+### Stop all listeners, cut http connections
+
+```
+diamond-admin -s diamond.sock RUNLEVEL 1
 ```
 
 ## Using the library
 
-Diamond requires Go 1.6.4 or newer
+Diamond requires a recent version of Go
 
 Read more:
 
@@ -33,7 +42,7 @@ Read more:
 
 #### CAUTION
 
-API may change without notice!
+API may change without notice! (it already has two times!)
 
 #### Contributing
 
