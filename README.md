@@ -34,6 +34,8 @@ diamond-admin -s diamond.sock RUNLEVEL 1
 
 Diamond requires a recent version of Go
 
+See the [examples](example)
+
 Read more:
 
 [aerth.github.io/diamond](https://aerth.github.io/diamond/)
