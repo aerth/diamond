@@ -58,7 +58,10 @@ func (c *Client) Send(cmd string, args ...string) (reply string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = client.Call("Diamond."+strings.Title(cmd), strings.Join(args, " "), &reply)
+	if !strings.Contains(cmd, ".") {
+		cmd = "Diamond." + strings.Title(cmd)
+	}
+	err = client.Call(strings.Title(cmd), strings.Join(args, " "), &reply)
 	if err != nil {
 		return "", err
 	}
