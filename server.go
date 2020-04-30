@@ -281,26 +281,37 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 
 	switch level {
 	case "0":
-		p.parent.Runlevel(0)
+		if err := p.parent.Runlevel(0); err != nil {
+			log.Println(err)
+		}
 		return nil
 	case "1":
-		p.parent.Runlevel(1)
+		if err := p.parent.Runlevel(1); err != nil {
+			log.Println(err)
+		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "2":
-		p.parent.Runlevel(2)
+		if err := p.parent.Runlevel(2); err != nil {
+			log.Println(err)
+		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "3":
-		p.parent.Runlevel(3)
+		if err := p.parent.Runlevel(3); err != nil {
+			log.Println(err)
+		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "4":
-		p.parent.Runlevel(4)
+		if err := p.parent.Runlevel(4); err != nil {
+			log.Println(err)
+		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	default:
 		log.Println("invalid arg:", level)
 		return nil
 	}
+	return fmt.Errorf("invalid")
 }
