@@ -179,6 +179,7 @@ func (s *Server) Runlevel(level int) error {
 	}
 	switch level {
 	case 0:
+		log.Println("Shutting down...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -194,6 +195,7 @@ func (s *Server) Runlevel(level int) error {
 		s.runlevel = 0
 		return nil
 	case 1:
+		log.Println("Entering runlevel 1...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -204,6 +206,7 @@ func (s *Server) Runlevel(level int) error {
 			s.listeners = s.HookLevel1()
 		}
 	case 2:
+		log.Println("Entering runlevel 2...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -215,6 +218,7 @@ func (s *Server) Runlevel(level int) error {
 		}
 
 	case 3:
+		log.Println("Entering runlevel 3...")
 		if s.HookLevel3 == nil && len(s.httpPairs) == 0 {
 			return fmt.Errorf("cant runlevel 3 with no listeners and no HookLevel3()")
 		}
@@ -245,6 +249,7 @@ func (s *Server) Runlevel(level int) error {
 		s.runlevel = 3
 
 	case 4:
+		log.Println("Entering runlevel 4...")
 		if s.HookLevel4 != nil {
 			s.listeners = s.HookLevel4()
 		}
@@ -264,6 +269,7 @@ func (p *packet) HELLO(arg string, reply *string) error {
 }
 
 func (p *packet) RUNLEVEL(level string, reply *string) error {
+	log.Printf("Request to shift runlevel: %q", level)
 	if len(level) != 1 {
 		*reply = "need runlevel to switch to (digit)"
 		return nil
