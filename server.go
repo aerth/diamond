@@ -168,8 +168,20 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) Runlevel(level int) error {
-	if level != 3 {
+	if level != 3 && level != 0 {
 		panic("can only set Runlevel 3 from go (for now)")
+	}
+	if level == 0 {
+		for i := range s.listeners {
+			if err := s.listeners[i].Close(); err != nil {
+				log.Printf("error closing listener %d: %v", i, err)
+			}
+		}
+		if err := s.cleanup(); err != nil {
+			log.Println("error cleaning up:", err)
+		}
+		s.runlevel = 0
+		return nil
 	}
 	if s.HookLevel3 == nil && len(s.httpPairs) == 0 {
 		panic("cant runlevel 3 with no listeners and no HookLevel3()")
