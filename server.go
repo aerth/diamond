@@ -171,7 +171,7 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) Runlevel(level int) error {
-	if 0 > level || level < 4 {
+	if 0 > level || level > 4 {
 		return fmt.Errorf("invalid level: %d", level)
 	}
 	if s.runlevel == level {
