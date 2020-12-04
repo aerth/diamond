@@ -149,7 +149,7 @@ func (s *Server) AddHTTPHandler(addr string, h http.Handler) int {
 // and cleans up the socket file on it's own.
 func (s *Server) Wait() error {
 	sigs := make(chan os.Signal)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGHUP, syscall.SIGSTOP)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGHUP)
 	var err error
 	select {
 	case err = <-s.quit:
@@ -305,7 +305,7 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 		return nil
 	case "4":
 		if err := p.parent.Runlevel(4); err != nil {
-			log.Pritntln(er)
+			log.Println(err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
@@ -314,4 +314,5 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 		return nil
 	}
 	log.Println("socket runlevel request succeeded")
+	return nil
 }
