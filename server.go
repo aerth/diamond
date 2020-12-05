@@ -171,11 +171,11 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) Runlevel(level int) error {
-	if 0 > level || level < 4 {
+	if 0 > level || level > 4 {
 		return fmt.Errorf("invalid level: %d", level)
 	}
 	if s.runlevel == level {
-		log.Println("warning: already in level %d", level)
+		log.Printf("warning: already in level %d", level)
 	}
 	switch level {
 	case 0:
@@ -313,6 +313,4 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 		log.Println("invalid arg:", level)
 		return nil
 	}
-	log.Println("socket runlevel request succeeded")
-	return nil
 }
