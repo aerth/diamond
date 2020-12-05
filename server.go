@@ -205,6 +205,7 @@ func (s *Server) Runlevel(level int) error {
 		if s.HookLevel1 != nil {
 			s.listeners = s.HookLevel1()
 		}
+		s.runlevel = 1
 	case 2:
 		log.Println("Entering runlevel 2...")
 		// close all listeners
@@ -216,6 +217,7 @@ func (s *Server) Runlevel(level int) error {
 		if s.HookLevel2 != nil {
 			s.listeners = s.HookLevel2()
 		}
+		s.runlevel = 2
 
 	case 3:
 		log.Println("Entering runlevel 3...")
@@ -244,8 +246,10 @@ func (s *Server) Runlevel(level int) error {
 				log.Println(srv.Serve(l))
 			}(l, handler)
 		}
-		s.listeners = append(s.listeners, listeners...)
-		log.Printf("new listeners: %d, total listeners: %d", len(listeners), len(s.listeners))
+		if len(listeners) > 0 {
+			s.listeners = append(s.listeners, listeners...)
+		}
+		log.Printf("auto http listeners: %d, total known listeners: %d", len(listeners), len(s.listeners))
 		s.runlevel = 3
 
 	case 4:
@@ -253,6 +257,7 @@ func (s *Server) Runlevel(level int) error {
 		if s.HookLevel4 != nil {
 			s.listeners = s.HookLevel4()
 		}
+		s.runlevel = 4
 
 	}
 	return nil
