@@ -4,6 +4,10 @@ go:
 - 1.14
 - 1.15
 - 1.x
+os:
+- windows
+- osx
+- linux
 install:
 - go get -t ./...
 before_script:
