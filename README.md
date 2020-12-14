@@ -2,6 +2,14 @@
 
 ### Runlevels for your web application
 
+Diamond provides a UNIX socket for administrators to gracefully shutdown an application, such as a web server.
+
+Apart from only shutting down, the admin can change gears, triggering functions and killing/starting listeners.
+
+The "KICK" feature allows upgrading a program with minimal downtime, kicking the old running process gracefully.
+
+If diamond-admin doesn't run on your platform (bsd?) you can still use the client library!
+
 :zap: ```telinit 3```
 
 [![GoDoc](https://godoc.org/github.com/aerth/diamond/lib?status.svg)](https://godoc.org/github.com/aerth/diamond/lib)
