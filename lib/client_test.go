@@ -58,7 +58,7 @@ func TestClient(t *testing.T) {
 
 	var cmdreply string
 	c := make(chan string, 1)
-	go func() {
+	go func(t *testing.T) {
 		println("Sending ECHO")
 		reply, err := client.Send("echo", "hello world")
 		if err != nil {
@@ -66,7 +66,7 @@ func TestClient(t *testing.T) {
 			t.FailNow()
 		}
 		c <- reply
-	}()
+	}(t)
 
 	select {
 	case <-time.After(3 * time.Second):
@@ -99,7 +99,7 @@ func TestClientRunlevel(t *testing.T) {
 
 	var cmdreply string
 	c := make(chan string, 1)
-	go func() {
+	go func(t *testing.T) {
 		println("Sending RUNLEVEL 1 request")
 		reply, err := client.Send("runlevel", "1")
 		if err != nil {
@@ -107,7 +107,7 @@ func TestClientRunlevel(t *testing.T) {
 			t.FailNow()
 		}
 		c <- reply
-	}()
+	}(t)
 
 	select {
 	case <-time.After(3 * time.Second):
@@ -141,7 +141,7 @@ func TestClientKick(t *testing.T) {
 
 	var cmdreply string
 	c := make(chan string, 1)
-	go func() {
+	go func(t *testing.T) {
 		println("Sending KICK")
 		reply, err := client.Send("KICK")
 		if err != nil {
@@ -149,7 +149,7 @@ func TestClientKick(t *testing.T) {
 			t.FailNow()
 		}
 		c <- reply
-	}()
+	}(t)
 
 	select {
 	case <-time.After(3 * time.Second):
