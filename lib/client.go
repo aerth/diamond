@@ -45,7 +45,16 @@ func NewClient(socketpath string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{socket: socketpath, serveraddr: addr}, nil
+	client := &Client{socket: socketpath, serveraddr: addr}
+	// here we dial, but return a working Client (with err) if the socket doesn't exist yet
+	c, err := rpc.Dial("unix", socketpath)
+	if err != nil {
+		return client, err
+	}
+	if err := c.Close(); err != nil {
+		return client, err
+	}
+	return client, err
 }
 
 // Send command and optional arguments and return the reply and any errors
