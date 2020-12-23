@@ -31,6 +31,7 @@ package diamond
 import (
 	"fmt"
 	"log"
+	logg "log"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -63,11 +64,16 @@ type Server struct {
 	HookLevel4 func() []net.Listener
 	cleanup    func() error
 	httpPairs  []httpPair
+	log        *logg.Logger
 }
 
 type httpPair struct {
 	Addr string
 	H    http.Handler
+}
+
+func (s Server) Log() *logg.Logger {
+	return s.log
 }
 
 // New creates a new Server, with a socket at socketpath, and starts listening.
@@ -92,12 +98,13 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		cleanup: func() error {
 			return os.Remove(socketpath)
 		},
+		log: logg.New(os.Stderr, "[diamond] ", log.LstdFlags),
 	}
 
 	r := rpc.NewServer()
 	var pack = &packet{s}
 	if err := r.RegisterName("Diamond", pack); err != nil {
-		log.Println("err registering rpc name:", err)
+		s.log.Println("err registering rpc name:", err)
 	}
 
 	for i := range s.fns {
@@ -122,7 +129,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		for {
 			conn, err := s.socket.Accept()
 			if err != nil {
-				log.Println("error:", err)
+				s.log.Println("error:", err)
 				continue
 			}
 			go s.handleConn(conn)
@@ -154,12 +161,12 @@ func (s *Server) Wait() error {
 	select {
 	case err = <-s.quit:
 		if err2 := os.Remove(s.socketname); err2 != nil {
-			log.Println("error removing socket:", err2)
+			s.log.Println("error removing socket:", err2)
 		}
 	case sig := <-sigs:
-		log.Println("recv sig:", sig.String())
+		s.log.Println("recv sig:", sig.String())
 		if err2 := os.Remove(s.socketname); err2 != nil {
-			log.Println("error removing socket:", err2)
+			s.log.Println("error removing socket:", err2)
 		}
 	}
 	return err
@@ -179,7 +186,7 @@ func (s *Server) Runlevel(level int) error {
 	}
 	switch level {
 	case 0:
-		log.Println("Shutting down...")
+		s.log.Println("Shutting down...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -190,12 +197,12 @@ func (s *Server) Runlevel(level int) error {
 			s.listeners = s.HookLevel0()
 		}
 		if err := s.cleanup(); err != nil {
-			log.Println("error cleaning up:", err)
+			s.log.Println("error cleaning up:", err)
 		}
 		s.runlevel = 0
 		return nil
 	case 1:
-		log.Println("Entering runlevel 1...")
+		s.log.Println("Entering runlevel 1...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -207,7 +214,7 @@ func (s *Server) Runlevel(level int) error {
 		}
 		s.runlevel = 1
 	case 2:
-		log.Println("Entering runlevel 2...")
+		s.log.Println("Entering runlevel 2...")
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
@@ -220,7 +227,7 @@ func (s *Server) Runlevel(level int) error {
 		s.runlevel = 2
 
 	case 3:
-		log.Println("Entering runlevel 3...")
+		s.log.Println("Entering runlevel 3...")
 		if s.HookLevel3 == nil && len(s.httpPairs) == 0 {
 			return fmt.Errorf("cant runlevel 3 with no listeners and no HookLevel3()")
 		}
@@ -231,7 +238,7 @@ func (s *Server) Runlevel(level int) error {
 		for i := range s.httpPairs {
 			l, err := net.Listen("tcp", s.httpPairs[i].Addr)
 			if err != nil {
-				log.Println("error listening:", err)
+				s.log.Println("error listening:", err)
 				continue
 			}
 			listeners = append(listeners, l)
@@ -243,7 +250,7 @@ func (s *Server) Runlevel(level int) error {
 				IdleTimeout:    time.Second,
 			}
 			go func(l net.Listener, srv *http.Server) {
-				log.Println(srv.Serve(l))
+				s.log.Println(srv.Serve(l))
 			}(l, handler)
 		}
 		if len(listeners) > 0 {
@@ -253,7 +260,7 @@ func (s *Server) Runlevel(level int) error {
 		s.runlevel = 3
 
 	case 4:
-		log.Println("Entering runlevel 4...")
+		s.log.Println("Entering runlevel 4...")
 		if s.HookLevel4 != nil {
 			s.listeners = s.HookLevel4()
 		}
@@ -284,38 +291,39 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 		return nil
 	}
 
+	s := p.parent
 	switch level {
 	case "0":
 		if err := p.parent.Runlevel(0); err != nil {
-			log.Println(err)
+			s.log.Println(err)
 		}
 		return nil
 	case "1":
 		if err := p.parent.Runlevel(1); err != nil {
-			log.Println(err)
+			s.log.Println(err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "2":
 		if err := p.parent.Runlevel(2); err != nil {
-			log.Println(err)
+			s.log.Println(err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "3":
 		if err := p.parent.Runlevel(3); err != nil {
-			log.Println(err)
+			s.log.Println(err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "4":
 		if err := p.parent.Runlevel(4); err != nil {
-			log.Println(err)
+			s.log.Println(err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	default:
-		log.Println("invalid arg:", level)
+		s.log.Println("invalid arg:", level)
 		return nil
 	}
 }
