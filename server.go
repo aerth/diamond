@@ -30,7 +30,6 @@ package diamond
 
 import (
 	"fmt"
-	"log"
 	logg "log"
 	"net"
 	"net/http"
@@ -98,7 +97,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		cleanup: func() error {
 			return os.Remove(socketpath)
 		},
-		log: logg.New(os.Stderr, "[diamond] ", log.LstdFlags),
+		log: logg.New(os.Stderr, "[diamond] ", logg.LstdFlags),
 	}
 
 	r := rpc.NewServer()
@@ -115,11 +114,11 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		typ := reflect.TypeOf(s.fns[i])
 		rcvr := reflect.ValueOf(s.fns[i])
 		sname := reflect.Indirect(rcvr).Type().Name()
-		log.Printf("Registered RPC type: %q", sname)
+		s.log.Printf("Registered RPC type: %q", sname)
 		for m := 0; m < typ.NumMethod(); m++ {
 			method := typ.Method(m)
 			mname := method.Name
-			log.Printf("\t%s.%s()", sname, mname)
+			s.log.Printf("\t%s.%s()", sname, mname)
 		}
 
 	}
@@ -182,7 +181,7 @@ func (s *Server) Runlevel(level int) error {
 		return fmt.Errorf("invalid level: %d", level)
 	}
 	if s.runlevel == level {
-		log.Printf("warning: already in level %d", level)
+		s.log.Printf("warning: already in level %d", level)
 	}
 	switch level {
 	case 0:
@@ -190,7 +189,7 @@ func (s *Server) Runlevel(level int) error {
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
-				log.Printf("error closing listener %d: %v", i, err)
+				s.log.Printf("error closing listener %d: %v", i, err)
 			}
 		}
 		if s.HookLevel0 != nil {
@@ -206,7 +205,7 @@ func (s *Server) Runlevel(level int) error {
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
-				log.Printf("error closing listener %d: %v", i, err)
+				s.log.Printf("error closing listener %d: %v", i, err)
 			}
 		}
 		if s.HookLevel1 != nil {
@@ -218,7 +217,7 @@ func (s *Server) Runlevel(level int) error {
 		// close all listeners
 		for i := range s.listeners {
 			if err := s.listeners[i].Close(); err != nil {
-				log.Printf("error closing listener %d: %v", i, err)
+				s.log.Printf("error closing listener %d: %v", i, err)
 			}
 		}
 		if s.HookLevel2 != nil {
@@ -256,7 +255,7 @@ func (s *Server) Runlevel(level int) error {
 		if len(listeners) > 0 {
 			s.listeners = append(s.listeners, listeners...)
 		}
-		log.Printf("auto http listeners: %d, total known listeners: %d", len(listeners), len(s.listeners))
+		s.log.Printf("auto http listeners: %d, total known listeners: %d", len(listeners), len(s.listeners))
 		s.runlevel = 3
 
 	case 4:
@@ -275,13 +274,13 @@ type packet struct {
 }
 
 func (p *packet) HELLO(arg string, reply *string) error {
-	log.Printf("HELLO: %q", arg)
+	p.parent.log.Printf("HELLO: %q", arg)
 	*reply = "HELLO from Diamond Socket"
 	return nil
 }
 
 func (p *packet) RUNLEVEL(level string, reply *string) error {
-	log.Printf("Request to shift runlevel: %q", level)
+	p.parent.log.Printf("Request to shift runlevel: %q", level)
 	if len(level) != 1 {
 		*reply = "need runlevel to switch to (digit)"
 		return nil
