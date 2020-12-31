@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	diamond "github.com/aerth/diamond/lib"
+	diamond "github.com/aerth/diamond"
 )
 
 var mux http.Handler
@@ -18,7 +18,7 @@ func init() {
 		println("fatal: need filesystem to serve")
 		println("usage: smplsrv <directory>")
 		println("set PORT variable to specify port")
-		println("'env PORT=0.0.0.0:8034 smplsrv .'")
+		println("'env SOCKET=/tmp/test.socket PORT=8034 smplsrv ~/public_html'")
 		os.Exit(111)
 	}
 }
@@ -31,19 +31,16 @@ func main() {
 		socket = os.Getenv("SOCKET")
 	}
 	mux := http.NewServeMux()
+	// handle all urls
 	mux.Handle("/", http.FileServer(http.Dir(os.Args[1])))
-	s, err := diamond.NewServer(mux, socket)
+	s, err := diamond.New(socket)
 	if err != nil {
 		log.Println(err)
 		os.Exit(111)
 	}
-	s.Config.Kickable = true
-	_, err = s.AddListener("tcp", ":"+port)
-	if err != nil {
-		s.Log.Println(err)
-		os.Exit(111)
-	}
+	s.AddHTTPHandler("127.0.0.1:"+port, mux)
 	s.Runlevel(3)
-	os.Exit(s.Wait())
-
+	if err := s.Wait(); err != nil {
+		log.Fatalln(err)
+	}
 }
