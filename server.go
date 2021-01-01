@@ -221,6 +221,11 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 // Runlevel changes gears into the selected runlevel.
+func (s *Server) Info() (listeners []net.Listener, level int) {
+	return s.listeners, s.runlevel.Load().(int)
+}
+
+// Runlevel changes gears into the selected runlevel.
 func (s *Server) Runlevel(level int) error {
 	s.rlock.Lock() // runlevel 0 will not unlock
 	s.rlock.Unlock()
