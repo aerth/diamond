@@ -93,6 +93,18 @@ func (s Server) Log() *stdlog.Logger {
 	return s.log
 }
 
+// LogPrefix is used for new diamond instances.
+// Set this before using New, or use d.Log().SetPrefix if the diamond already exists.
+var LogPrefix = "[◆] "
+
+// LogFlags used for new diamond instances.
+// Set this before using New, or use d.Log().SetFlags if the diamond already exists.
+var LogFlags = stdlog.LstdFlags
+
+// LogOutput used for new diamond instances.
+// Set this before using New, or use d.Log().SetFlags if the diamond already exists.
+var LogOutput = os.Stderr
+
 // New creates a new Server, with a socket at socketpath, and starts listening.
 //
 // Optional fnPointers are pointers to types (`new(t)`) that contain methods
@@ -115,7 +127,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		cleanup: func() error {
 			return os.Remove(socketpath)
 		},
-		log:           stdlog.New(os.Stderr, "[diamond] ", stdlog.LstdFlags),
+		log:           stdlog.New(LogOutput, LogPrefix, LogFlags),
 		runlevel:      new(atomic.Value),
 		rlock:         new(sync.Mutex),
 		ServerOptions: &http.Server{},
