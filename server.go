@@ -227,7 +227,7 @@ func (s *Server) Wait() error {
 func (s *Server) handleConn(conn net.Conn) {
 	// TODO do auth?
 	s.r.ServeConn(conn)
-	if err := conn.Close(); err != nil {
+	if err := conn.Close(); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		s.log.Printf("error closing unix socket connection: %v", err)
 	}
 }
