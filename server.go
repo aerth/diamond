@@ -113,6 +113,20 @@ func (s Server) Log() Logger {
 	return s.log
 }
 
+// Log exports our logger for customization
+func (s Server) SetLog(l interface{}) {
+	var logger Logger
+	switch l.(type) {
+	case Logger:
+		logger = l.(Logger)
+	case *stdlog.Logger:
+		logger = StdLogger{l.(*stdlog.Logger)}
+	default:
+		panic(fmt.Sprintf("%T is not a Logger type we are looking for !!!", l))
+	}
+	s.log = logger
+}
+
 // LogPrefix is used for new diamond instances.
 // Set this before using New, or use d.Log().SetPrefix if the diamond already exists.
 var LogPrefix = "[◆] "
