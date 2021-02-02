@@ -80,7 +80,7 @@ type Server struct {
 	httpPairs []httpPair
 
 	// standard stdloger
-	log *stdlog.Logger
+	log Logger
 }
 
 type httpPair struct {
@@ -88,8 +88,28 @@ type httpPair struct {
 	H    http.Handler
 }
 
+type Logger interface {
+	Info(f string, i ...interface{})
+	Error(f string, i ...interface{})
+	Debug(f string, i ...interface{})
+}
+
+type StdLogger struct {
+	*stdlog.Logger
+}
+
+func (s StdLogger) Info(f string, i ...interface{}) {
+	s.Logger.Printf(f, i...)
+}
+func (s StdLogger) Debug(f string, i ...interface{}) {
+	s.Info(f, i...)
+}
+func (s StdLogger) Error(f string, i ...interface{}) {
+	s.Info(f, i...)
+}
+
 // Log exports our logger for customization
-func (s Server) Log() *stdlog.Logger {
+func (s Server) Log() Logger {
 	return s.log
 }
 
@@ -99,7 +119,7 @@ var LogPrefix = "[◆] "
 
 // LogFlags used for new diamond instances.
 // Set this before using New, or use d.Log().SetFlags if the diamond already exists.
-var LogFlags = stdlog.LstdFlags
+var LogFlags = stdlog.LstdFlags // default logger
 
 // LogOutput used for new diamond instances.
 // Set this before using New, or use d.Log().SetFlags if the diamond already exists.
@@ -127,7 +147,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		cleanup: func() error {
 			return os.Remove(socketpath)
 		},
-		log:           stdlog.New(LogOutput, LogPrefix, LogFlags),
+		log:           StdLogger{stdlog.New(LogOutput, LogPrefix, LogFlags)},
 		runlevel:      new(atomic.Value),
 		rlock:         new(sync.Mutex),
 		ServerOptions: &http.Server{},
@@ -137,7 +157,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 	r := rpc.NewServer()
 	var pack = &packet{s}
 	if err := r.RegisterName("Diamond", pack); err != nil {
-		s.log.Println("err registering rpc name:", err)
+		s.log.Error("err registering rpc name: %v", err)
 	}
 
 	// given rpc methods
@@ -150,12 +170,12 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		rcvr := reflect.ValueOf(s.fns[i])
 		sname := reflect.Indirect(rcvr).Type().Name()
 		// print type name
-		s.log.Printf("Registered RPC type: %q", sname)
+		s.log.Info("Registered RPC type: %q", sname)
 		for m := 0; m < typ.NumMethod(); m++ {
 			method := typ.Method(m)
 			mname := method.Name
 			// print func name with type
-			s.log.Printf("\t%s.%s()", sname, mname)
+			s.log.Info("\t%s.%s()", sname, mname)
 		}
 
 	}
@@ -167,7 +187,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		for {
 			conn, err := s.socket.Accept()
 			if err != nil {
-				s.log.Println("error:", err)
+				s.log.Error("error listening on unix socket: %v", err)
 				continue
 			}
 			// handle each new connection in a new goroutine
@@ -206,19 +226,19 @@ func (s *Server) Wait() error {
 		case err = <-s.quit: // quit request via runlevel 0
 			// (via the parent app or via our unix socket)
 			if err2 := os.Remove(s.socketname); err2 != nil {
-				s.log.Println("error removing socket:", err2)
+				s.log.Error("error removing socket: %v", err2)
 			}
 			break
 		case sig := <-sigs: // quit via signal
 			cur := s.runlevel.Load().(int)
-			s.log.Printf("recv sig: %q, shifting down from runlevel %d", sig.String(), cur)
+			s.log.Info("recv sig: %q, shifting down from runlevel %d", sig.String(), cur)
 			for i := cur - 1; i >= 0; i-- {
 				if err := s.Runlevel(i); err != nil {
-					s.log.Printf("encountered an error during shift to runlevel %d: %v", i, err)
+					s.log.Error("encountered an error during shift to runlevel %d: %v", i, err)
 				}
 			}
 			if err2 := os.Remove(s.socketname); err2 != nil && !os.IsNotExist(err) {
-				s.log.Println("error removing socket:", err2)
+				s.log.Error("error removing socket: %v", err2)
 			}
 		}
 	}
@@ -228,7 +248,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	// TODO do auth?
 	s.r.ServeConn(conn)
 	if err := conn.Close(); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		s.log.Printf("error closing unix socket connection: %v", err)
+		s.log.Info("error closing unix socket connection: %v", err)
 	}
 }
 
@@ -249,26 +269,26 @@ func (s *Server) Runlevel(level int) error {
 	// get current level
 	var cur = s.runlevel.Load().(int)
 	if cur == level {
-		s.log.Printf("warning: already in level %d, will continue...", level)
+		s.log.Info("warning: already in level %d, will continue...", level)
 	}
-	s.log.Printf("Entering runlevel %d from %d...", level, cur)
+	s.log.Info("Entering runlevel %d from %d...", level, cur)
 	if cur < 3 {
 		wait := closeListeners(s)
 		wait()
 	}
 	switch level {
 	case 0:
-		s.log.Println("Removing diamond socket...")
+		s.log.Info("Removing diamond socket...")
 		if err := s.cleanup(); err != nil {
-			s.log.Println("error cleaning up:", err)
+			s.log.Error("error cleaning up: %v", err)
 		}
 		if s.HookLevel0 != nil {
-			s.log.Println("Shutting down gracefully...")
+			s.log.Info("Shutting down gracefully...")
 			s.listeners = s.HookLevel0() // could close databases properly etc.
 		}
 		// to skip this, just have your program not return from HookLevel0.
 		<-time.After(time.Second / 2) // lets give a little bit of time
-		s.log.Println("")             // done
+		s.log.Info("")                // done
 		os.Exit(0)
 	case 1:
 		if s.HookLevel1 != nil {
@@ -290,8 +310,14 @@ func (s *Server) Runlevel(level int) error {
 		for i := range s.httpPairs {
 			l, err := net.Listen("tcp", s.httpPairs[i].Addr)
 			if err != nil {
-				s.log.Println("error listening:", err)
+				s.log.Error("error listening: %v", err)
 				continue
+			}
+
+			var stdlogger *stdlog.Logger
+			logger, ok := s.log.(StdLogger)
+			if ok {
+				stdlogger = logger.Logger
 			}
 			handler := &http.Server{
 				Handler:        s.httpPairs[i].H,
@@ -305,7 +331,7 @@ func (s *Server) Runlevel(level int) error {
 				BaseContext:       s.ServerOptions.BaseContext,
 				ConnContext:       s.ServerOptions.ConnContext,
 				ConnState:         s.ServerOptions.ConnState,
-				ErrorLog:          s.log,
+				ErrorLog:          stdlogger,
 				ReadHeaderTimeout: 10 * time.Second,
 				TLSConfig:         s.ServerOptions.TLSConfig,
 				TLSNextProto:      s.ServerOptions.TLSNextProto,
@@ -316,9 +342,9 @@ func (s *Server) Runlevel(level int) error {
 				name := l.Addr().String()
 				closeErr := srv.Serve(l)
 				if !strings.HasSuffix(closeErr.Error(), "use of closed network connection") {
-					s.log.Printf("error while closing server: %q", closeErr.Error())
+					s.log.Info("error while closing server: %q", closeErr.Error())
 				} else {
-					s.log.Printf("closed listener: %q", name)
+					s.log.Info("closed listener: %q", name)
 				}
 			}(l, handler)
 
@@ -329,9 +355,8 @@ func (s *Server) Runlevel(level int) error {
 		if len(listeners) > 0 {
 			s.listeners = append(s.listeners, listeners...)
 		}
-		s.log.Printf("auto http listeners: %d, total known listeners: %d", len(listeners), len(s.listeners))
+		s.log.Info("auto http listeners: %d, total known listeners: %d", len(listeners), len(s.listeners))
 	case 4:
-		s.log.Println("Entering runlevel 4...")
 		if s.HookLevel4 != nil {
 			s.listeners = s.HookLevel4()
 		}
@@ -345,13 +370,13 @@ type packet struct {
 }
 
 func (p *packet) HELLO(arg string, reply *string) error {
-	p.parent.log.Printf("HELLO: %q", arg)
+	p.parent.log.Info("HELLO: %q", arg)
 	*reply = "HELLO from Diamond Socket"
 	return nil
 }
 
 func (p *packet) RUNLEVEL(level string, reply *string) error {
-	p.parent.log.Printf("Request to shift runlevel: %q", level)
+	p.parent.log.Info("Request to shift runlevel: %q", level)
 	if len(level) != 1 {
 		*reply = "need runlevel to switch to (digit)"
 		return nil
@@ -365,35 +390,35 @@ func (p *packet) RUNLEVEL(level string, reply *string) error {
 	switch level {
 	case "0":
 		if err := p.parent.Runlevel(0); err != nil {
-			s.log.Println(err)
+			s.log.Error("Switching to runlevel %d: %v", err)
 		}
 		return nil
 	case "1":
 		if err := p.parent.Runlevel(1); err != nil {
-			s.log.Println(err)
+			s.log.Error("%v", err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "2":
 		if err := p.parent.Runlevel(2); err != nil {
-			s.log.Println(err)
+			s.log.Error("%v", err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "3":
 		if err := p.parent.Runlevel(3); err != nil {
-			s.log.Println(err)
+			s.log.Error("%v", err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	case "4":
 		if err := p.parent.Runlevel(4); err != nil {
-			s.log.Println(err)
+			s.log.Error("%v", err)
 		}
 		*reply = fmt.Sprintf("level %d", p.parent.runlevel)
 		return nil
 	default:
-		s.log.Println("invalid arg:", level)
+		s.log.Error("invalid arg:", level)
 		return nil
 	}
 }
@@ -402,13 +427,13 @@ func closeListeners(s *Server) func() {
 	if len(s.listeners) == 0 {
 		return func() {}
 	}
-	s.log.Printf("closing listeners")
+	s.log.Info("closing listeners")
 	wg := sync.WaitGroup{}
 	for i := range s.listeners {
 		wg.Add(1)
 		if err := s.listeners[i].Close(); err != nil &&
 			!strings.HasSuffix(err.Error(), "use of closed network connection") {
-			s.log.Printf("error closing listener %d: %v", i, err)
+			s.log.Info("error closing listener %d: %v", i, err)
 		}
 		wg.Done()
 	}

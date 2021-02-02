@@ -2,7 +2,6 @@ package diamond
 
 import (
 	"fmt"
-	stdlog "log"
 	"net/http"
 	"os"
 	"sync"
@@ -18,7 +17,6 @@ func TestDiamond1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Log().SetFlags(stdlog.Lshortfile)
 	webserver := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "it works")
 	})
