@@ -80,7 +80,7 @@ type Server struct {
 	httpPairs []httpPair
 
 	// standard stdloger
-	log Logger
+	log Unilogger
 }
 
 type httpPair struct {
@@ -88,7 +88,66 @@ type httpPair struct {
 	H    http.Handler
 }
 
-type Logger interface {
+type Unilogger struct {
+	Logger2 Logger2
+	Logger1 Logger1
+	T       LoggerType
+}
+
+func (u Unilogger) Info(f string, i ...interface{}) {
+	switch u.T {
+	case Logger1T:
+		u.Logger1.Info(f, i...)
+		return
+	case Logger2T:
+		u.Logger2.Info(f, i...)
+	case 0:
+		return
+	default:
+		panic(fmt.Sprintf("%d is not a Logger type we are looking for !!!", u.T))
+	}
+}
+func (u Unilogger) Debug(f string, i ...interface{}) {
+	switch u.T {
+	case Logger1T:
+		u.Logger1.Debug(f, i...)
+		return
+	case Logger2T:
+		u.Logger2.Debug(f, i...)
+	case 0:
+		return
+	default:
+		panic(fmt.Sprintf("%d is not a Logger type we are looking for !!!", u.T))
+	}
+}
+func (u Unilogger) Error(f string, i ...interface{}) {
+	switch u.T {
+	case Logger1T:
+		u.Logger1.Error(f, i...)
+		return
+	case Logger2T:
+		u.Logger2.Error(f, i...)
+	case 0:
+		return
+	default:
+		panic(fmt.Sprintf("%d is not a Logger type we are looking for !!!", u.T))
+	}
+}
+
+type LoggerType byte
+
+const (
+	_ LoggerType = iota
+	Logger1T
+	Logger2T
+)
+
+type Logger2 interface {
+	Info(f interface{}, i ...interface{})
+	Error(f interface{}, i ...interface{})
+	Debug(f interface{}, i ...interface{})
+}
+type Logger1 interface {
 	Info(f string, i ...interface{})
 	Error(f string, i ...interface{})
 	Debug(f string, i ...interface{})
@@ -109,22 +168,23 @@ func (s StdLogger) Error(f string, i ...interface{}) {
 }
 
 // Log exports our logger for customization
-func (s Server) Log() Logger {
+func (s Server) Log() Unilogger {
 	return s.log
 }
 
 // Log exports our logger for customization
 func (s Server) SetLog(l interface{}) {
-	var logger Logger
 	switch l.(type) {
-	case Logger:
-		logger = l.(Logger)
+	case Logger1:
+		s.log = Unilogger{Logger1: l.(Logger1), T: Logger1T}
+	case Logger2:
+		s.log = Unilogger{Logger2: l.(Logger2), T: Logger2T}
 	case *stdlog.Logger:
-		logger = StdLogger{l.(*stdlog.Logger)}
+		s.log = Unilogger{Logger1: StdLogger{l.(*stdlog.Logger)}, T: Logger1T}
 	default:
 		panic(fmt.Sprintf("%T is not a Logger type we are looking for !!!", l))
 	}
-	s.log = logger
+	s.log.Info("diamond logger on: %v", true)
 }
 
 // LogPrefix is used for new diamond instances.
@@ -161,7 +221,7 @@ func New(socketpath string, fnPointers ...interface{}) (*Server, error) {
 		cleanup: func() error {
 			return os.Remove(socketpath)
 		},
-		log:           StdLogger{stdlog.New(LogOutput, LogPrefix, LogFlags)},
+		log:           Unilogger{Logger1: StdLogger{stdlog.New(LogOutput, LogPrefix, LogFlags)}, T: Logger1T},
 		runlevel:      new(atomic.Value),
 		rlock:         new(sync.Mutex),
 		ServerOptions: &http.Server{},
@@ -329,10 +389,8 @@ func (s *Server) Runlevel(level int) error {
 			}
 
 			var stdlogger *stdlog.Logger
-			logger, ok := s.log.(StdLogger)
-			if ok {
-				stdlogger = logger.Logger
-			}
+			stdlogger = stdlog.New(os.Stderr, "[diamond]", stdlog.LstdFlags|stdlog.Lshortfile)
+
 			handler := &http.Server{
 				Handler:        s.httpPairs[i].H,
 				ReadTimeout:    10 * time.Second,
